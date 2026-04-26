@@ -471,12 +471,23 @@ export const AdminDashboard = () => {
                             <div className="rounded-2xl overflow-hidden aspect-video bg-brand-navy/5 border border-black/5 flex items-center justify-center relative shadow-inner">
                                 {newProject.mediaUrl ? (
                                     newProject.type === 'video' ? (
-                                        <video 
-                                            src={newProject.mediaUrl} 
-                                            className="w-full h-full object-cover" 
-                                            controls 
-                                            muted
-                                        />
+                                        newProject.mediaUrl.includes('youtube.com') || newProject.mediaUrl.includes('youtu.be') ? (
+                                            <iframe 
+                                                src={newProject.mediaUrl.includes('watch?v=') 
+                                                    ? newProject.mediaUrl.replace('watch?v=', 'embed/') 
+                                                    : newProject.mediaUrl.replace('youtu.be/', 'youtube.com/embed/')
+                                                }
+                                                className="w-full h-full border-none"
+                                                allowFullScreen
+                                            />
+                                        ) : (
+                                            <video 
+                                                src={newProject.mediaUrl} 
+                                                className="w-full h-full object-cover" 
+                                                controls 
+                                                muted
+                                            />
+                                        )
                                     ) : (
                                         <img 
                                             src={newProject.mediaUrl} 
@@ -673,22 +684,22 @@ export const AdminDashboard = () => {
                         <Video className="text-brand-gold" size={24} />
                         <h2 className="text-xl font-display font-black italic">كيف تحصل على رابط للفيديو؟</h2>
                     </div>
-                    <div className="space-y-4 relative z-10">
-                        <div className="flex gap-4">
+                    <div className="space-y-4 relative z-10 text-right">
+                        <div className="flex gap-4 justify-end">
+                            <p className="text-sm leading-relaxed"><b>الخيار الأول (الأسرع):</b> ارفع الفيديو على موقع <b>streamable.com</b> وانسخ الرابط الناتج. هذا يحول أي فيديو من هاتفك إلى لينك فوراً.</p>
                             <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">1</div>
-                            <p className="text-sm leading-relaxed">افتح تطبيق <b>YouTube</b> وقم برفع الفيديو الخاص بك.</p>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 justify-end">
+                            <p className="text-sm leading-relaxed"><b>الخيار الثاني (الاحترافي):</b> ارفع الفيديو على <b>YouTube</b> وانسخ الرابط. تأكد من ضبط الخصوصية على "غير مدرج" (Unlisted).</p>
                             <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">2</div>
-                            <p className="text-sm leading-relaxed">اختر إعداد الخصوصية <b>"غير مدرج" (Unlisted)</b> ليبقى متاحاً فقط لزوار موقعك.</p>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 justify-end">
+                            <p className="text-sm leading-relaxed"><b>الخيار الثالث (تيليجرام):</b> أرسل الفيديو لنفسك على تيليجرام ثم استخدم بوت مثل @Files2LinkBot للحصول على رابط مباشر يبدأ بـ http.</p>
                             <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">3</div>
-                            <p className="text-sm leading-relaxed">انسخ الرابط وضعه في خانة <b>"رابط الصورة أو الفيديو"</b> في لوحة التحكم.</p>
                         </div>
                         <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                            <p className="text-xs font-bold text-brand-gold mb-1 flex items-center gap-2"><HelpCircle size={14} /> لماذا هذه الطريقة أفضل؟</p>
-                            <p className="text-[10px] text-white/60 leading-relaxed italic">خوادم يوتيوب تسمح بتشغيل الفيديو بجميع السرعات وجميع الأجهزة ومهما كان حجمه كبيراً، مما يجعل موقعك أسرع وأكثر احترافية.</p>
+                            <p className="text-xs font-bold text-brand-gold mb-1 flex items-center gap-2 justify-end"><HelpCircle size={14} /> ملاحظة هامة:</p>
+                            <p className="text-[10px] text-white/60 leading-relaxed italic text-right">استخدام الروابط (Links) أفضل بكثير لأنه يجعل الموقع يفتح بسرعة فائقة ولا يأخذ مساحة من ذاكرة الموقع، كما أن الروابط تضمن بقاء الفيديوهات بجودة عالية (HD).</p>
                         </div>
                     </div>
                 </div>

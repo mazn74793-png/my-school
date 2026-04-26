@@ -335,14 +335,27 @@ const App = () => {
               >
                 <X size={20} />
               </button>
-              <video 
-                src={settings.directorVideoUrl} 
-                controls 
-                autoPlay 
-                playsInline
-                preload="auto"
-                className="w-full h-full"
-              />
+              {settings.directorVideoUrl && (
+                settings.directorVideoUrl.includes('youtube.com') || settings.directorVideoUrl.includes('youtu.be') ? (
+                  <iframe 
+                    src={settings.directorVideoUrl.includes('watch?v=') 
+                      ? settings.directorVideoUrl.replace('watch?v=', 'embed/') 
+                      : settings.directorVideoUrl.replace('youtu.be/', 'youtube.com/embed/')
+                    }
+                    className="w-full h-full border-none"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video 
+                    src={settings.directorVideoUrl} 
+                    controls 
+                    autoPlay 
+                    playsInline
+                    preload="auto"
+                    className="w-full h-full"
+                  />
+                )
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -372,11 +385,32 @@ const App = () => {
                 <X size={24} />
               </button>
               
-              <div className="w-full md:w-1/2 h-[300px] md:h-auto relative">
-                <img 
-                  src={selectedProject.mediaUrl} 
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-full md:w-1/2 h-[300px] md:h-auto relative bg-brand-navy/5">
+                {selectedProject.type === 'video' ? (
+                  selectedProject.mediaUrl.includes('youtube.com') || selectedProject.mediaUrl.includes('youtu.be') ? (
+                    <iframe 
+                      src={selectedProject.mediaUrl.includes('watch?v=') 
+                        ? selectedProject.mediaUrl.replace('watch?v=', 'embed/') 
+                        : selectedProject.mediaUrl.replace('youtu.be/', 'youtube.com/embed/')
+                      }
+                      className="w-full h-full"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video 
+                      src={selectedProject.mediaUrl} 
+                      className="w-full h-full object-contain bg-black" 
+                      controls 
+                      autoPlay
+                    />
+                  )
+                ) : (
+                  <img 
+                    src={selectedProject.mediaUrl} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as any).src = "https://placehold.co/800x600?text=Image+Link+Broken"; }}
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/50 to-transparent pointer-events-none" />
               </div>
               
