@@ -294,33 +294,6 @@ export const AdminDashboard = () => {
     <div className="min-h-screen bg-brand-paper px-4 md:px-8 pt-24 pb-20 text-brand-navy">
       <Toaster position="bottom-right" />
       
-      {/* Upload Overlay */}
-      {isUploading && (
-        <div className="fixed inset-0 z-[1000] bg-brand-navy/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-full max-w-sm">
-            <div className="mb-8">
-              <div className="w-24 h-24 bg-brand-gold/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                <Upload size={40} className="text-brand-gold" />
-              </div>
-              <h2 className="text-2xl font-display font-black italic text-white mb-2">جاري الرفع الآن...</h2>
-              <p className="text-white/40 text-sm italic">يرجى عدم إغلاق الصفحة حتى اكتمال العملية</p>
-            </div>
-            
-            <div className="relative h-4 w-full bg-white/5 rounded-full overflow-hidden border border-white/10 mb-4">
-              <div 
-                className="absolute top-0 right-0 h-full bg-brand-gold transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-            
-            <div className="flex justify-between items-center text-white/60 font-mono text-xs">
-              <span>{uploadProgress}%</span>
-              <span>جاري التحميل</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
           <div className="flex bg-white p-1 rounded-2xl border border-black/5 shadow-sm w-full md:w-auto">
