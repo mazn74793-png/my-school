@@ -214,6 +214,9 @@ const App = () => {
       if (!isSiteReady) {
         setTimeout(() => setIsSiteReady(true), 2000);
       }
+    }, (error) => {
+      console.error("Projects Fetch Error:", error);
+      // Optional: toast error
     });
 
     // Fetch Settings
@@ -222,6 +225,8 @@ const App = () => {
             setSettings(docSnapshot.data() as SiteSettings);
         }
         setLoading(false);
+    }, (error) => {
+      console.error("Settings Fetch Error:", error);
     });
 
     return () => { 

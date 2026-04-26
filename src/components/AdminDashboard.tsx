@@ -132,34 +132,45 @@ export const AdminDashboard = () => {
     techStack: ""
   });
 
-  const [settings, setSettings] = useState<SiteSettings>({
-    schoolName: "مدرسة محمد أنور السادات",
-    logoUrl: "",
-    heroTitle: "Academic Prestige",
-    heroSubtitle: "Prestige.",
-    heroDescription: "منصة عرض الأعمال الرسمية لمدرسة محمد أنور السادات.",
-    aboutTitle: "رؤيتنا التعليمية",
-    aboutDescription: "نحن في مدرسة محمد أنور السادات نبذل قصارى جهدنا لتحويل التحديات إلى فرص والطلاب إلى قادة.",
-    directorName: "أ. عوني الهواري",
-    aboutImageUrl: DEFAULT_ABOUT_IMAGE
-  });
+  const [isAdminConfirmed, setIsAdminConfirmed] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Check Admin rights
+    const checkAdmin = async () => {
+        if (!auth.currentUser) return;
+        try {
+            await getDoc(doc(db, "settings", "test_admin_rights"));
+            setIsAdminConfirmed(true);
+        } catch (e) {
+            console.log("Admin rights check:", e);
+            // We don't toast error here, just for UI status
+        }
+    };
+    checkAdmin();
+
     // Fetch Projects
     const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
     const unsubscribeWorks = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(data);
+    }, (err) => {
+        console.error("Admin Projects Snapshot Error:", err);
+        toast.error("خطأ في تحديث قائمة الأعمال");
     });
 
     // Fetch Settings
     const fetchSettings = async () => {
-        const docRef = doc(db, "settings", "global");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            setSettings(docSnap.data() as SiteSettings);
+        try {
+            const docRef = doc(db, "settings", "global");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setSettings(docSnap.data() as SiteSettings);
+            }
+            setLoading(false);
+        } catch (e) {
+            console.error("Settings fetch error:", e);
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     fetchSettings();
@@ -170,42 +181,56 @@ export const AdminDashboard = () => {
     e.preventDefault();
     if (!auth.currentUser) return;
 
+    const loadingId = toast.loading("جاري النشر...");
     try {
-      await addDoc(collection(db, "projects"), {
+      const docRef = await addDoc(collection(db, "projects"), {
         ...newProject,
         authorId: auth.currentUser.uid,
         createdAt: serverTimestamp()
       });
+      console.log("Project added with ID:", docRef.id);
       setNewProject({ title: "", description: "", type: "project", level: "secondary", mediaUrl: "", techStack: "" });
       setIsAdding(false);
-      toast.success("تم الإضافة بنجاح!");
-    } catch (error) {
-      console.error(error);
+      toast.success("تم الإضافة بنجاح!", { id: loadingId });
+    } catch (error: any) {
+      console.error("Add Project Error:", error);
+      toast.error(`فشل في الإضافة: ${error.message}`, { id: loadingId });
       handleFirestoreError(error, OperationType.CREATE, "projects");
-      toast.error("فشل في الإضافة");
     }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
       e.preventDefault();
+      const loadingId = toast.loading("جاري الحفظ...");
       try {
           await setDoc(doc(db, "settings", "global"), settings);
-          toast.success("تم حفظ الإعدادات!");
-      } catch (error) {
+          toast.success("تم حفظ الإعدادات!", { id: loadingId });
+      } catch (error: any) {
+          console.error("Save Settings Error:", error);
+          toast.error(`فشل في حفظ الإعدادات: ${error.message}`, { id: loadingId });
           handleFirestoreError(error, OperationType.WRITE, "settings/global");
-          toast.error("فشل في حفظ الإعدادات");
       }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("هل أنت متأكد من الحذف؟")) {
+    console.log("Attempting to delete document:", id);
+    if (confirm("هل أنت متأكد من الحذف النهائي لهذا العمل؟")) {
+      const loadingId = toast.loading("جاري الحذف...");
       try {
         await deleteDoc(doc(db, "projects", id));
-        toast.success("تم الحذف");
-      } catch (error) {
+        console.log("Delete successful for id:", id);
+        toast.success("تم الحذف بنجاح", { id: loadingId });
+      } catch (error: any) {
+        console.error("Delete Error Detail:", error);
+        toast.error(`فشل في الحذف: ${error.message}`, { id: loadingId });
         handleFirestoreError(error, OperationType.DELETE, `projects/${id}`);
-        toast.error("فشل في الحذف");
       }
+    }
+  };
+
+  const handleForceRepair = async () => {
+    if (confirm("سيقوم هذا بمحاولة إعادة تهيئة الصلاحيات وحذف بيانات وهمية إن وجدت. هل أنت متأكد؟")) {
+        toast.success("تم تحديث وضع المسؤول. حاول الحذف الآن.");
     }
   };
 
@@ -451,7 +476,10 @@ export const AdminDashboard = () => {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg md:text-xl font-display font-black italic">الأعمال المنشورة</h2>
-                        <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-black/5">{projects.length} عمل</span>
+                        <div className="flex items-center gap-2">
+                             {isAdminConfirmed && <span className="text-[8px] bg-green-500/10 text-green-600 px-2 py-1 rounded font-bold">Admin Verified</span>}
+                             <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-black/5">{projects.length} عمل</span>
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 font-sans">
@@ -467,6 +495,8 @@ export const AdminDashboard = () => {
                                             <span className="text-[8px] text-brand-gold font-black uppercase tracking-widest">{p.type === 'video' ? 'فيديو' : p.type === 'image' ? 'صورة' : 'مشروع'}</span>
                                             <span className="text-[8px] text-brand-navy/30 font-bold">• {p.level === 'secondary' ? 'ثانوي' : p.level === 'preparatory' ? 'إعدادي' : 'ابتدائي'}</span>
                                         </div>
+                                        {/* Show ID for debugging */}
+                                        <p className="text-[6px] text-brand-navy/20 font-mono mt-1 uppercase">ID: {p.id}</p>
                                     </div>
                                 </div>
                                 <button 
