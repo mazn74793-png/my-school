@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy } from "lucide-react";
+import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy, Search, Filter } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SKILLS, ACHIEVEMENTS } from "./data";
 import { db, auth, signIn } from "./lib/firebase";
@@ -442,7 +442,7 @@ const App = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Globe className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/20 group-focus-within:text-brand-gold transition-colors" size={20} />
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/20 group-focus-within:text-brand-gold transition-colors" size={20} />
             </div>
 
             <div className="flex flex-wrap justify-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-black/5">
