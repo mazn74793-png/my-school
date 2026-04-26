@@ -424,26 +424,29 @@ export const AdminDashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <div className="flex justify-between items-center px-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30">رابط أو رفع ملف</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30">إضافة المحتوى (صورة أو فيديو)</label>
                                     <div className="flex gap-2">
-                                        <a href="https://streamable.com" target="_blank" rel="noreferrer" className="text-[8px] bg-brand-gold/10 text-brand-gold px-2 py-0.5 rounded-full font-bold hover:bg-brand-gold/20 transition-all">تحويل فيديو لرابط</a>
-                                        <a href="https://postimages.org" target="_blank" rel="noreferrer" className="text-[8px] bg-brand-navy/5 text-brand-navy/60 px-2 py-0.5 rounded-full font-bold hover:bg-brand-navy/10 transition-all">تحويل صورة لرابط</a>
+                                        <a href="https://streamable.com" target="_blank" rel="noreferrer" className="text-[8px] bg-brand-gold/10 text-brand-gold px-2 py-1 rounded-full font-bold hover:bg-brand-gold/20 transition-all">تحويل فيديو لرابط</a>
+                                        <a href="https://postimages.org" target="_blank" rel="noreferrer" className="text-[8px] bg-brand-navy/5 text-brand-navy/60 px-2 py-1 rounded-full font-bold hover:bg-brand-navy/10 transition-all">تحويل صورة لرابط</a>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <div className="relative flex-1">
-                                        <input 
-                                            placeholder="انسخ الرابط من المواقع أعلاه وضعه هنا..."
-                                            className="w-full bg-brand-paper border border-black/5 rounded-2xl py-3 px-4 focus:border-brand-gold outline-none font-mono text-xs text-right"
-                                            value={newProject.mediaUrl}
-                                            onChange={e => setNewProject({...newProject, mediaUrl: e.target.value})}
-                                            required
-                                        />
-                                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/10" size={14} />
+
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    <div className="md:col-span-3">
+                                        <div className="relative h-full">
+                                            <input 
+                                                placeholder="انسخ الرابط من المواقع أعلاه أو ارفع ملفاً..."
+                                                className="w-full h-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-4 pr-12 focus:border-brand-gold outline-none font-mono text-xs text-right"
+                                                value={newProject.mediaUrl}
+                                                onChange={e => setNewProject({...newProject, mediaUrl: e.target.value})}
+                                            />
+                                            <Globe className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-gold" size={16} />
+                                        </div>
                                     </div>
-                                    <label className="shrink-0 cursor-pointer w-12 h-12 bg-brand-navy/5 hover:bg-brand-gold/10 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy transition-all relative group">
+                                    
+                                    <label className="cursor-pointer bg-brand-navy text-white rounded-2xl flex flex-col items-center justify-center p-4 hover:bg-brand-gold transition-all group shrink-0 shadow-lg shadow-brand-navy/10 border-2 border-transparent hover:border-white/20 h-16 md:h-auto">
                                         <input 
                                             type="file" 
                                             className="hidden" 
@@ -459,25 +462,35 @@ export const AdminDashboard = () => {
                                                         });
                                                         toast.success("تم الرفع بنجاح!", { id: loadingId });
                                                     } catch (error) {
-                                                        // Error is handled in handleFileUpload
+                                                        // Error handled in handleFileUpload
                                                     }
                                                 }
                                             }}
                                         />
                                         {isUploading ? (
                                             <div className="flex flex-col items-center">
-                                                <Loader2 size={16} className="animate-spin text-brand-gold" />
-                                                <span className="text-[8px] mt-1 font-bold">{uploadProgress}%</span>
+                                                <Loader2 size={24} className="animate-spin mb-1" />
+                                                <span className="text-[9px] font-bold">{uploadProgress}%</span>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col items-center">
-                                                <Upload size={18} />
-                                                <span className="text-[7px] mt-1 opacity-0 group-hover:opacity-100 font-bold">رفع مباشر</span>
-                                            </div>
+                                            <>
+                                                <Upload size={24} className="mb-1 group-hover:scale-110 transition-transform" />
+                                                <span className="text-[9px] font-black italic">رفع من جهازك</span>
+                                            </>
                                         )}
                                     </label>
                                 </div>
-                                <p className="text-[8px] text-brand-navy/40 px-2 italic">يفضل استخدام (Streamable) للفيديوهات الكبيرة لضمان سرعة الموقع</p>
+                                
+                                <div className="flex flex-wrap gap-x-4 gap-y-2 px-2">
+                                    <p className="text-[9px] text-brand-navy/40 italic flex items-center gap-1">
+                                        <Plus size={10} className="text-brand-gold" />
+                                        يمكنك الرفع المباشر أو وضع رابط خارجي
+                                    </p>
+                                    <p className="text-[9px] text-brand-navy/40 italic flex items-center gap-1">
+                                        <HelpCircle size={10} className="text-brand-gold" />
+                                        للفيديوهات الكبيرة يفضل استخدام روابط (Youtube/Streamable)
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
