@@ -140,6 +140,18 @@ export const AdminDashboard = () => {
 
   const [isAdminConfirmed, setIsAdminConfirmed] = useState<boolean | null>(null);
 
+  const [settings, setSettings] = useState<SiteSettings>({
+    schoolName: "مدرسة محمد أنور السادات",
+    logoUrl: "",
+    heroTitle: "Academic Prestige",
+    heroSubtitle: "Prestige.",
+    heroDescription: "منصة عرض الأعمال الرسمية لمدرسة محمد أنور السادات.",
+    aboutTitle: "رؤيتنا التعليمية",
+    aboutDescription: "نحن في مدرسة محمد أنور السادات نبذل قصارى جهدنا لتحويل التحديات إلى فرص والطلاب إلى قادة.",
+    directorName: "أ. عوني الهواري",
+    aboutImageUrl: DEFAULT_ABOUT_IMAGE
+  });
+
   useEffect(() => {
     // Check Admin rights
     const checkAdmin = async () => {
