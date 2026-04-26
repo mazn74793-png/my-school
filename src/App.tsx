@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy, Search, Filter } from "lucide-react";
+import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy, Search, Filter, Trash2, Book, Image as ImageIcon, Video } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SKILLS, ACHIEVEMENTS } from "./data";
 import { db, auth, signIn } from "./lib/firebase";
@@ -474,50 +474,38 @@ const App = () => {
             </motion.div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-            <AnimatePresence mode="popLayout">
-                {filteredProjects.map((project, idx) => (
-                <motion.div 
-                    key={project.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.5 }}
-                    whileHover={{ y: -10 }}
-                    className="group relative cursor-pointer"
-                    onClick={() => setSelectedProject(project)}
-                >
-                    <div className={`card-luxury overflow-hidden aspect-[4/5] ${idx % 2 === 0 ? "rotate-1" : "-rotate-1"} hover:rotate-0 transition-all duration-700`}>
-                        <img 
-                            src={project.mediaUrl} 
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-90 group-hover:opacity-100" 
-                            style={{ objectPosition: 'center' }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/90 via-brand-navy/20 to-transparent opacity-60" />
-                        <div className="absolute top-6 left-6 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-[8px] px-2 py-1 bg-brand-gold text-white rounded font-mono uppercase tracking-widest">{project.level}</span>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-                            <div className="mb-4 flex items-center gap-3">
-                                <span className="text-[9px] px-2 py-1 bg-white/20 backdrop-blur rounded uppercase font-mono">{project.type}</span>
-                                <span className="h-[1px] w-8 bg-brand-gold" />
-                            </div>
-                            <h3 className="text-2xl font-display font-black italic mb-2">{project.title}</h3>
-                            <p className="text-sm text-white/60 line-clamp-2 italic font-serif">{project.description}</p>
-                            <div className="mt-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 text-brand-gold">
-                                عرض التفاصيل كاملة <ArrowUpRight size={12} />
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-                ))}
-            </AnimatePresence>
-            {filteredProjects.length === 0 && (
-              <div className="col-span-full py-40 text-center border-2 border-dashed border-black/5 rounded-3xl">
-                <p className="text-brand-navy/30 italic font-serif">لا يوجد محتوى لهذه المرحلة حالياً..</p>
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredProjects.map((project, index) => (
+                  <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 }}
+                      onClick={() => setSelectedProject(project)}
+                      className="group cursor-pointer bg-white rounded-3xl overflow-hidden border border-black/5 shadow-sm hover:shadow-2xl hover:shadow-brand-gold/10 transition-all duration-500"
+                  >
+                      <div className="aspect-[4/5] overflow-hidden relative">
+                          <img 
+                              src={project.mediaUrl} 
+                              alt={project.title}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 text-right">
+                              <span className="text-brand-gold font-mono text-[10px] uppercase tracking-widest mb-2">{project.type}</span>
+                              <h3 className="text-white text-xl font-display font-black italic">{project.title}</h3>
+                          </div>
+                      </div>
+                  </motion.div>
+              ))}
+          </div>
+        )}
+
+        {!loading && filteredProjects.length === 0 && (
+          <div className="py-40 text-center">
+            <p className="text-brand-navy/30 italic text-2xl">لا توجد مشاريع تطابق بحثك حالياً...</p>
           </div>
         )}
       </section>
