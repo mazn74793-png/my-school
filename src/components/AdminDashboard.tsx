@@ -156,9 +156,10 @@ export const AdminDashboard = () => {
     // Check Admin rights
     const checkAdmin = async () => {
         if (!auth.currentUser) return;
+        const userEmail = auth.currentUser.email?.toLowerCase();
         try {
-            // Self-register as admin if email matches
-            if (auth.currentUser.email?.toLowerCase() === "motaem23y@gmail.com") {
+            // Register as admin if email matches either variation
+            if (userEmail === "motaem23y@gmail.com" || userEmail === "motaem23@gmail.com") {
                 await setDoc(doc(db, "admins", auth.currentUser.uid), {
                     email: auth.currentUser.email,
                     registeredAt: serverTimestamp()
@@ -257,7 +258,8 @@ export const AdminDashboard = () => {
   const handleForceRepair = async () => {
     if (confirm("سيقوم هذا بمحاولة إعادة تحديث البيانات من السيرفر وحل مشاكل الصلاحيات. هل أنت متأكد؟")) {
         setLoading(true);
-        if (auth.currentUser && auth.currentUser.email?.toLowerCase() === "motaem23y@gmail.com") {
+        const userEmail = auth.currentUser?.email?.toLowerCase();
+        if (auth.currentUser && (userEmail === "motaem23y@gmail.com" || userEmail === "motaem23@gmail.com")) {
              try {
                  await setDoc(doc(db, "admins", auth.currentUser.uid), {
                     email: auth.currentUser.email,
@@ -485,11 +487,20 @@ export const AdminDashboard = () => {
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">المعاينة</label>
                             <div className="rounded-2xl overflow-hidden aspect-video bg-brand-navy/5 border border-black/5 flex items-center justify-center relative shadow-inner">
                                 {newProject.mediaUrl ? (
-                                    <img 
-                                        src={newProject.mediaUrl} 
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => { (e.target as any).src = "https://placehold.co/800x450?text=Check+URL"; }}
-                                    />
+                                    newProject.type === 'video' ? (
+                                        <video 
+                                            src={newProject.mediaUrl} 
+                                            className="w-full h-full object-cover" 
+                                            controls 
+                                            muted
+                                        />
+                                    ) : (
+                                        <img 
+                                            src={newProject.mediaUrl} 
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => { (e.target as any).src = "https://placehold.co/800x450?text=Check+URL"; }}
+                                        />
+                                    )
                                 ) : (
                                     <div className="text-center text-brand-navy/20">
                                         <ImageIcon size={32} className="mx-auto mb-2 opacity-50" />
@@ -526,8 +537,6 @@ export const AdminDashboard = () => {
                                   {isAdminConfirmed && <span className="text-[8px] bg-green-500/10 text-green-600 px-2 py-1 rounded font-bold">Admin Verified</span>}
                                   <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-black/5">{projects.length} عمل</span>
                              </div>
-                             <span className="text-[8px] text-brand-navy/30 mt-1">{auth.currentUser?.email}</span>
-                             <span className="text-[8px] text-brand-navy/20 font-mono">{auth.currentUser?.uid}</span>
                         </div>
                     </div>
                     
