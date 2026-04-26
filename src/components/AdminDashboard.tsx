@@ -463,20 +463,40 @@ export const AdminDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط فيديو المدير</label>
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">فيديو المدير (ترحيب)</label>
                         <div className="flex gap-2">
-                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.directorVideoUrl || ""} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} placeholder="رابط فيديو ترحيبي..." />
-                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy">
-                                <input type="file" className="hidden" accept="video/*" onChange={e => {
-                                    const file = e.target.files?.[0];
-                                    if (file) handleFileUpload(file, (url) => setSettings(s => ({ ...s, directorVideoUrl: url })));
-                                }} />
-                                <Upload size={18} />
+                            <input 
+                                className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" 
+                                value={settings.directorVideoUrl || ""} 
+                                onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} 
+                                placeholder="رابط فيديو ترحيبي..." 
+                            />
+                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy hover:bg-brand-gold hover:text-white transition-colors">
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="video/*" 
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const loadingId = toast.loading("جاري رفع الفيديو...");
+                                            try {
+                                                await handleFileUpload(file, (url) => {
+                                                    setSettings(s => ({ ...s, directorVideoUrl: url }));
+                                                    toast.success("تم رفع الفيديو بنجاح!", { id: loadingId });
+                                                });
+                                            } catch (error) {
+                                                toast.error("فشل رفع الفيديو", { id: loadingId });
+                                            }
+                                        }
+                                    }} 
+                                />
+                                <Video size={18} />
                             </label>
                         </div>
                         {settings.directorVideoUrl && (
-                            <div className="mt-2 aspect-video rounded-xl overflow-hidden border border-black/5 bg-black">
+                            <div className="mt-4 aspect-video rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg">
                                 <video 
                                     src={settings.directorVideoUrl} 
                                     className="w-full h-full object-cover" 
