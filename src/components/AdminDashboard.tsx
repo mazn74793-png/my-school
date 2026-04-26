@@ -168,9 +168,19 @@ export const AdminDashboard = () => {
             } else {
                 const adminSnap = await getDoc(doc(db, "admins", auth.currentUser.uid));
                 if (adminSnap.exists()) setIsAdminConfirmed(true);
+                else {
+                    // One last check for the hardcoded admin emails in the snapshot stage
+                    if (userEmail === "motaem23y@gmail.com" || userEmail === "motaem23@gmail.com") {
+                        setIsAdminConfirmed(true);
+                    }
+                }
             }
         } catch (e) {
             console.log("Admin registration check failed:", e);
+            // Fallback for UI if registration fails but email is valid
+            if (userEmail === "motaem23y@gmail.com" || userEmail === "motaem23@gmail.com") {
+                setIsAdminConfirmed(true);
+            }
         }
     };
     checkAdmin();
@@ -657,23 +667,28 @@ export const AdminDashboard = () => {
             </form>
         ) : (
             <div className="space-y-6 animate-in fade-in duration-500">
-                <div className="card-luxury p-6 md:p-8 space-y-6">
-                    <div className="flex items-center gap-3 border-b border-black/5 pb-4">
-                        <Facebook className="text-brand-navy" size={24} />
-                        <h2 className="text-xl font-display font-black italic">كيفية النقل من فيسبوك؟</h2>
+                <div className="card-luxury p-6 md:p-8 space-y-6 bg-brand-navy border-none text-white overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 blur-3xl rounded-full" />
+                    <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                        <Video className="text-brand-gold" size={24} />
+                        <h2 className="text-xl font-display font-black italic">كيف تحصل على رابط للفيديو؟</h2>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-4 relative z-10">
                         <div className="flex gap-4">
-                            <div className="w-8 h-8 rounded-full bg-brand-gold/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">1</div>
-                            <p className="text-sm leading-relaxed">افتح الصورة أو الفيديو على فيسبوك، ثم اضغط على زر الخيارات (النقاط الثلاث) واختر <b>"نسخ الرابط"</b>.</p>
+                            <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">1</div>
+                            <p className="text-sm leading-relaxed">افتح تطبيق <b>YouTube</b> وقم برفع الفيديو الخاص بك.</p>
                         </div>
                         <div className="flex gap-4">
-                            <div className="w-8 h-8 rounded-full bg-brand-gold/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">2</div>
-                            <p className="text-sm leading-relaxed">إذا كان الرابط لا يظهر كصورة مباشرة، يفضل رفع الصورة على موقع مثل postimages.org ونسخ <b>الرابط المباشر (Direct Link)</b>.</p>
+                            <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">2</div>
+                            <p className="text-sm leading-relaxed">اختر إعداد الخصوصية <b>"غير مدرج" (Unlisted)</b> ليبقى متاحاً فقط لزوار موقعك.</p>
                         </div>
-                        <div className="p-4 bg-brand-navy/5 rounded-2xl border border-black/5">
-                            <p className="text-xs font-bold text-brand-navy mb-1 flex items-center gap-2"><HelpCircle size={14} /> ملاحظة هامة لجودة الصور:</p>
-                            <p className="text-[10px] text-brand-navy/60 leading-relaxed italic">روابط فيسبوك قد تنتهي صلاحيتها بعد فترة. يفضل دائماً رفع الصور الأصلية من هاتفك مباشرة لضمان بقائها للأبد على الموقع.</p>
+                        <div className="flex gap-4">
+                            <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">3</div>
+                            <p className="text-sm leading-relaxed">انسخ الرابط وضعه في خانة <b>"رابط الصورة أو الفيديو"</b> في لوحة التحكم.</p>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                            <p className="text-xs font-bold text-brand-gold mb-1 flex items-center gap-2"><HelpCircle size={14} /> لماذا هذه الطريقة أفضل؟</p>
+                            <p className="text-[10px] text-white/60 leading-relaxed italic">خوادم يوتيوب تسمح بتشغيل الفيديو بجميع السرعات وجميع الأجهزة ومهما كان حجمه كبيراً، مما يجعل موقعك أسرع وأكثر احترافية.</p>
                         </div>
                     </div>
                 </div>
