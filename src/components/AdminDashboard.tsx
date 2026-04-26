@@ -598,9 +598,18 @@ export const AdminDashboard = () => {
             </>
         ) : activeTab === "settings" ? (
             <form onSubmit={handleSaveSettings} className="card-luxury p-6 md:p-10 space-y-6 md:space-y-8 animate-in fade-in duration-500">
-                <div className="flex items-center gap-4 mb-2 border-b border-black/5 pb-4">
-                   <Globe className="text-brand-gold" size={20} />
-                   <h2 className="text-lg md:text-xl font-display font-black italic">إعدادات واجهة الموقع</h2>
+                <div className="flex items-center justify-between gap-4 mb-2 border-b border-black/5 pb-4">
+                   <div className="flex items-center gap-4">
+                        <Globe className="text-brand-gold" size={20} />
+                        <h2 className="text-lg md:text-xl font-display font-black italic">إعدادات واجهة الموقع</h2>
+                   </div>
+                   <button 
+                        type="button"
+                        onClick={handleForceRepair}
+                        className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-full font-bold hover:bg-red-100 transition-all border border-red-100 flex items-center gap-1"
+                   >
+                        <HelpCircle size={12} /> إصلاح الصلاحيات
+                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
