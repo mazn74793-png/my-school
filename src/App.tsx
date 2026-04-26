@@ -141,34 +141,36 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
       
       <div className="relative flex flex-col items-center order-1 lg:order-2">
         <motion.div 
-           initial={{ opacity: 0, scale: 0.8 }}
-           animate={{ opacity: 1, scale: 1 }}
-           transition={{ duration: 1.5, type: "spring" }}
-           className="relative z-10 w-full flex items-center justify-center py-20"
+           initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+           animate={{ opacity: 1, scale: 1, rotate: 0 }}
+           transition={{ duration: 1.5, type: "spring", bounce: 0.4 }}
+           className="relative z-10 w-full aspect-square max-w-[500px]"
         >
-          <motion.h2 
-            animate={{ opacity: [1, 0.3, 1] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="text-white text-9xl font-display font-black italic select-none pointer-events-none opacity-5 mix-blend-overlay absolute inset-0 flex items-center justify-center text-center leading-none"
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.03, 1],
+              rotateY: [0, 5, 0]
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="w-full h-full p-4 border-[12px] border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-full bg-white flex items-center justify-center overflow-hidden"
           >
-            {settings.schoolName}
-          </motion.h2>
-          <div className="text-center relative z-10">
-            <motion.div 
-              animate={{ 
-                scale: [1, 1.1, 1],
-                opacity: [1, 0.6, 1]
-              }}
-              transition={{ duration: 4, repeat: Infinity }}
-              className="px-8 py-4 bg-white/50 backdrop-blur-sm border border-black/5 rounded-3xl shadow-xl"
-            >
-              <p className="text-brand-gold font-mono text-xs uppercase tracking-[0.4em] mb-2">Director</p>
-              <p className="font-display italic font-black text-4xl text-brand-navy">{settings.directorName}</p>
-            </motion.div>
-          </div>
-
+            <img 
+              src={settings.logoUrl || DEFAULT_LOGO} 
+              alt="School Logo" 
+              className="w-full h-full object-contain scale-110"
+            />
+          </motion.div>
+          
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-gold/10 rounded-full blur-3xl animate-pulse" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-navy/5 rounded-full blur-3xl animate-pulse" />
+        </motion.div>
+        <motion.div 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            className="mt-8 text-center"
+        >
+          <p className="text-brand-gold font-mono text-[10px] uppercase tracking-[0.4em] mb-1">Director</p>
+          <p className="font-display italic font-black text-2xl text-brand-navy">{settings.directorName}</p>
         </motion.div>
       </div>
     </div>
@@ -394,49 +396,35 @@ const App = () => {
 
       {/* About Section */}
       <section id="about" className="py-32 px-6 max-w-7xl mx-auto border-t border-black/5">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-24 items-center">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="lg:col-span-5 relative"
-          >
-            <div className="tilted-card card-luxury aspect-[3/4] overflow-hidden">
-              <img 
-                src={settings.aboutImageUrl || "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800"} 
-                alt="Education" 
-                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
-              />
-            </div>
-            <div className="absolute -bottom-10 -right-10 bg-brand-navy p-10 rounded-3xl text-white shadow-2xl">
-               <Trophy size={40} className="text-brand-gold mb-4" />
-               <p className="text-3xl font-display font-black italic">Rank #1</p>
-               <p className="text-xs uppercase tracking-widest text-white/50">Top Secondary School</p>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="lg:col-span-7 flex flex-col items-end"
-          >
+        <div className="flex flex-col items-center max-w-4xl mx-auto text-center">
             <span className="text-[10px] font-mono text-brand-gold uppercase tracking-[0.4em] mb-4">Values & Vision</span>
-            <h2 className="text-6xl font-display font-black italic text-brand-navy mb-8 text-right">{settings.aboutTitle}</h2>
-            <p className="text-2xl text-brand-navy/70 leading-relaxed text-right font-serif">
-              {settings.aboutDescription}
-            </p>
-            <div className="mt-12 flex gap-12 w-full justify-end border-t border-black/5 pt-8">
-               <div className="text-right">
-                 <p className="text-4xl font-display font-black italic text-brand-navy">1500+</p>
-                 <p className="text-xs text-brand-navy/40 uppercase font-mono">Students</p>
+            <h2 className="text-6xl md:text-8xl font-display font-black italic text-brand-navy mb-12">{settings.aboutTitle}</h2>
+            
+            <div className="relative">
+                <div className="absolute -top-20 -left-20 w-40 h-40 bg-brand-gold/5 rounded-full blur-3xl" />
+                <p className="text-3xl md:text-4xl text-brand-navy font-serif italic leading-relaxed relative z-10">
+                  {settings.aboutDescription}
+                </p>
+            </div>
+
+            <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-12 w-full pt-12 border-t border-black/5">
+               <div className="text-center">
+                 <p className="text-5xl font-display font-black italic text-brand-navy">1500+</p>
+                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">Students</p>
                </div>
-               <div className="text-right">
-                 <p className="text-4xl font-display font-black italic text-brand-navy">50+</p>
-                 <p className="text-xs text-brand-navy/40 uppercase font-mono">STEM Projects</p>
+               <div className="text-center">
+                 <p className="text-5xl font-display font-black italic text-brand-navy">50+</p>
+                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">STEM Projects</p>
+               </div>
+               <div className="text-center">
+                 <p className="text-5xl font-display font-black italic text-brand-navy">100%</p>
+                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">Commitment</p>
+               </div>
+               <div className="text-center">
+                 <p className="text-5xl font-display font-black italic text-brand-navy">#1</p>
+                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">Ranking</p>
                </div>
             </div>
-          </motion.div>
         </div>
       </section>
 

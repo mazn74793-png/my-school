@@ -54,43 +54,55 @@ export const AdminDashboard = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  const handleFileUpload = async (file: File, callback: (url: string) => void) => {
-    if (!auth.currentUser) {
-      toast.error("يجب تسجيل الدخول أولاً");
-      return;
-    }
-    
-    setIsUploading(true);
-    setUploadProgress(0);
+  const handleFileUpload = (file: File, callback: (url: string) => void): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (!auth.currentUser) {
+        toast.error("يجب تسجيل الدخول أولاً");
+        reject("Not authenticated");
+        return;
+      }
+      
+      setIsUploading(true);
+      setUploadProgress(0);
 
-    try {
-      const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      try {
+        const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          setUploadProgress(progress);
-        },
-        (error) => {
-          console.error(error);
-          toast.error("فشل رفع الملف");
-          setIsUploading(false);
-        },
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          callback(downloadURL);
-          toast.success("تم رفع الملف بنجاح!");
-          setIsUploading(false);
-          setUploadProgress(0);
-        }
-      );
-    } catch (error) {
-      console.error(error);
-      toast.error("حدث خطأ أثناء الرفع");
-      setIsUploading(false);
-    }
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            setUploadProgress(progress);
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            toast.error("فشل رفع الملف: " + error.message);
+            setIsUploading(false);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              callback(downloadURL);
+              setIsUploading(false);
+              setUploadProgress(0);
+              resolve(downloadURL);
+            } catch (err) {
+              console.error("Error getting download URL:", err);
+              toast.error("فشل في الحصول على رابط الملف");
+              setIsUploading(false);
+              reject(err);
+            }
+          }
+        );
+      } catch (error) {
+        console.error("Storage ref error:", error);
+        toast.error("حدث خطأ أثناء الرفع");
+        setIsUploading(false);
+        reject(error);
+      }
+    });
   };
 
   const [newProject, setNewProject] = useState({
@@ -472,29 +484,46 @@ export const AdminDashboard = () => {
                                 onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} 
                                 placeholder="رابط فيديو ترحيبي..." 
                             />
-                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy hover:bg-brand-gold hover:text-white transition-colors">
+                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy hover:bg-brand-gold hover:text-white transition-colors relative">
                                 <input 
                                     type="file" 
                                     className="hidden" 
                                     accept="video/*" 
+                                    disabled={isUploading}
                                     onChange={async (e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
-                                            const loadingId = toast.loading("جاري رفع الفيديو...");
+                                            const loadingId = toast.loading("جاري بدأ الرفع...");
                                             try {
                                                 await handleFileUpload(file, (url) => {
                                                     setSettings(s => ({ ...s, directorVideoUrl: url }));
-                                                    toast.success("تم رفع الفيديو بنجاح!", { id: loadingId });
                                                 });
+                                                toast.success("تم رفع الفيديو بنجاح!", { id: loadingId });
                                             } catch (error) {
                                                 toast.error("فشل رفع الفيديو", { id: loadingId });
                                             }
                                         }
                                     }} 
                                 />
-                                <Video size={18} />
+                                {isUploading ? (
+                                    <div className="flex flex-col items-center">
+                                        <Loader2 className="animate-spin" size={18} />
+                                        <span className="text-[8px] mt-1 font-bold">{uploadProgress}%</span>
+                                    </div>
+                                ) : (
+                                    <Video size={18} />
+                                )}
                             </label>
                         </div>
+                        {isUploading && (
+                            <div className="w-full bg-black/5 h-1.5 rounded-full overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${uploadProgress}%` }}
+                                    className="h-full bg-brand-gold"
+                                />
+                            </div>
+                        )}
                         {settings.directorVideoUrl && (
                             <div className="mt-4 aspect-video rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg">
                                 <video 
@@ -503,6 +532,7 @@ export const AdminDashboard = () => {
                                     controls 
                                     playsInline
                                     preload="metadata"
+                                    key={settings.directorVideoUrl}
                                 />
                             </div>
                         )}
