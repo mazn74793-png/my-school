@@ -35,13 +35,21 @@ async function startServer() {
       return res.status(400).json({ success: false, message: "No file uploaded" });
     }
 
+    // Validation check for Cloudinary config
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      return res.status(500).json({ 
+        success: false, 
+        message: "Cloudinary configuration is missing in server environment. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to Vercel/Environment Variables." 
+      });
+    }
+
     try {
-      const streamUpload = (req: any) => {
+      const streamUpload = (fileBuffer: Buffer) => {
         return new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
             {
-              folder: "website_uploads",
-              resource_type: "auto", // Automatically detect if it's an image or video
+              folder: "pro_uploads",
+              resource_type: "auto",
             },
             (error, result) => {
               if (result) {
@@ -51,11 +59,11 @@ async function startServer() {
               }
             }
           );
-          streamifier.createReadStream(req.file.buffer).pipe(stream);
+          streamifier.createReadStream(fileBuffer).pipe(stream);
         });
       };
 
-      const result: any = await streamUpload(req);
+      const result: any = await streamUpload(req.file.buffer);
       res.json({ 
         success: true, 
         url: result.secure_url,
@@ -65,7 +73,7 @@ async function startServer() {
       console.error("Cloudinary Upload Error:", error);
       res.status(500).json({ 
         success: false, 
-        message: error.message || "Failed to upload to cloud storage" 
+        message: error.message || "Cloudinary upload failed" 
       });
     }
   });

@@ -57,7 +57,7 @@ export const AdminDashboard = () => {
   
   const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
     return new Promise(async (resolve, reject) => {
-      console.log("Starting server-side upload for file:", file.name, "size:", file.size);
+      console.log("Starting Cloudinary upload for file:", file.name);
       
       setIsUploading(true);
       setUploadProgress(0);
@@ -66,7 +66,6 @@ export const AdminDashboard = () => {
       formData.append("file", file);
 
       try {
-        // Using XHR to track progress
         const xhr = new XMLHttpRequest();
         
         xhr.upload.addEventListener("progress", (event) => {
@@ -80,31 +79,38 @@ export const AdminDashboard = () => {
           if (xhr.status === 200) {
             const response = JSON.parse(xhr.responseText);
             if (response.success && response.url) {
-              console.log("Upload successful:", response.url);
               callback(response.url);
               setIsUploading(false);
               setUploadProgress(0);
               resolve(response.url);
             } else {
-              throw new Error(response.message || "فشل الرفع على السيرفر");
+              const msg = response.message || "فشل الرفع";
+              toast.error(msg);
+              reject(msg);
             }
           } else {
-            throw new Error(`Server error: ${xhr.status}`);
+            let errorMsg = "حدث خطأ في السيرفر";
+            try {
+              const res = JSON.parse(xhr.responseText);
+              errorMsg = res.message || errorMsg;
+            } catch(e) {}
+            toast.error(errorMsg);
+            reject(errorMsg);
           }
         };
 
         xhr.onerror = () => {
-          throw new Error("Network error during upload");
+          toast.error("فشل الاتصال بالسيرفر");
+          reject("Network error");
+          setIsUploading(false);
         };
 
         xhr.open("POST", "/api/upload");
         xhr.send(formData);
 
       } catch (error: any) {
-        console.error("Upload error:", error);
-        toast.error(`فشل الرفع: ${error.message || "حدث خطأ غير متوقع"}`);
+        toast.error("حدث خطأ في الرفع");
         setIsUploading(false);
-        setUploadProgress(0);
         reject(error);
       }
     });
@@ -721,34 +727,27 @@ export const AdminDashboard = () => {
                     </div>
                     <div className="space-y-6 relative z-10 text-right">
                         <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">لقد قمنا بتغيير نظام الرفع! <CheckCircle2 size={16} /></p>
+                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">نظام الرفع الاحترافي (Firebase) <CheckCircle2 size={16} /></p>
                             <p className="text-xs text-white/70 leading-relaxed italic">
-                                الآن لم تعد بحاجة لضبط إعدادات Firebase المعقدة. يمكنك الضغط على زر <b>"رفع من جهازك"</b> وسيقوم السيرفر الجديد بحفظ ملفاتك فوراً وتوفير رابط خاص بها.
+                                تم تفعيل الرفع المباشر لـ Firebase Storage. هذا النظام يضمن لك سرعة عالية وروابط دائمة لا تنتهي صلاحيتها.
                             </p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex flex-col p-4 bg-white/5 border border-white/10 rounded-2xl">
                                 <div className="flex items-center justify-end gap-2 mb-2 text-brand-gold">
-                                    <span className="text-xs font-bold">الرفع المباشر</span>
-                                    <Upload size={16} />
+                                    <span className="text-xs font-bold">خطوة هامة</span>
+                                    <HelpCircle size={16} />
                                 </div>
-                                <p className="text-[10px] text-white/50 leading-relaxed">اضغط على زر الرفع من جهازك واختر أي صورة أو فيديو بحد أقصى 50 ميجا بايت.</p>
+                                <p className="text-[10px] text-white/50 leading-relaxed">إذا وصل الرفع لـ 100% ولم يظهر الرابط، يرجى التأكد من تفعيل <b>Storage</b> في لوحة تحكم Firebase وضبط القواعد.</p>
                             </div>
                             <div className="flex flex-col p-4 bg-white/5 border border-white/10 rounded-2xl">
                                 <div className="flex items-center justify-end gap-2 mb-2 text-brand-gold">
-                                    <span className="text-xs font-bold">الروابط الخارجية</span>
-                                    <Globe size={16} />
+                                    <span className="text-xs font-bold">القواعد المقترحة</span>
+                                    <Save size={16} />
                                 </div>
-                                <p className="text-[10px] text-white/50 leading-relaxed">إذا كان الفيديو كبيراً جداً (أكبر من 50 ميجا)، يفضل رفعه على يوتيوب ووضع الرابط.</p>
+                                <p className="text-[10px] text-white/50 leading-relaxed">ضع هذه القاعدة في Firebase Storage ليعمل الرفع: <br/> <code className="text-[8px] bg-black/30 p-1 block mt-1">allow read, write: if request.auth != null;</code></p>
                             </div>
-                        </div>
-
-                        <div className="p-4 bg-brand-gold/10 rounded-2xl border border-brand-gold/20">
-                            <p className="text-xs font-bold text-brand-gold mb-1 flex items-center gap-2 justify-end"><HelpCircle size={14} /> لماذا السيرفر الحالي أفضل؟</p>
-                            <p className="text-[10px] text-white/60 leading-relaxed italic text-right">
-                                السيرفر يدعم الرفع السريع ولا يحتاج لأي حسابات خارجية، ويقوم بصيانة وإصلاح الروابط تلقائياً لضمان عدم توقفها.
-                            </p>
                         </div>
                     </div>
                 </div>
