@@ -55,81 +55,56 @@ export const AdminDashboard = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  const handleFileUpload = (file: File, callback: (url: string) => void): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      console.log("Starting upload for file:", file.name, "size:", file.size);
-      
-      if (!auth.currentUser) {
-        toast.error("يجب تسجيل الدخول أولاً");
-        reject("Not authenticated");
-        return;
-      }
-
-      if (!storage) {
-        toast.error("Firebase Storage is not initialized");
-        console.error("Storage object is null or undefined");
-        reject("Storage not found");
-        return;
-      }
-      
-      console.log("Storage bucket:", (storage as any)._bucket);
+  const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+      console.log("Starting server-side upload for file:", file.name, "size:", file.size);
       
       setIsUploading(true);
       setUploadProgress(0);
 
-      try {
-        // Clean filename and ensure it's not too long
-        const timestamp = Date.now();
-        const safeName = file.name.substring(0, 50).replace(/[^a-zA-Z0-9.]/g, '_');
-        const storageRef = ref(storage, `uploads/${timestamp}-${safeName}`);
-        console.log("Storage ref created:", storageRef.fullPath);
-        
-        const uploadTask = uploadBytesResumable(storageRef, file);
+      const formData = new FormData();
+      formData.append("file", file);
 
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-            console.log("Upload progress:", progress, "%");
+      try {
+        // Using XHR to track progress
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
             setUploadProgress(progress);
-          },
-          (error) => {
-            console.error("Firebase Upload Error Detail:", error);
-            let msg = "فشل الرفع";
-            if (error.code === 'storage/unauthorized') {
-                msg = "مشكلة في صلاحيات Firebase Storage. يرجى تفعيل الرفع من لوحة تحكم Firebase وتغيير القواعد (Rules) للسماح بالرفع.";
-                toast.error(msg, { duration: 6000 });
-            } else if (error.code === 'storage/quota-exceeded') {
-                msg = "تم تجاوز حصة التخزين المجانية.";
-                toast.error(msg);
-            } else {
-                toast.error(`خطأ: ${error.message}`);
-            }
-            
-            setIsUploading(false);
-            reject(error);
-          },
-          async () => {
-            try {
-              console.log("Upload complete, getting download URL...");
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              console.log("Download URL obtained:", downloadURL);
-              callback(downloadURL);
+          }
+        });
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            if (response.success && response.url) {
+              console.log("Upload successful:", response.url);
+              callback(response.url);
               setIsUploading(false);
               setUploadProgress(0);
-              resolve(downloadURL);
-            } catch (err) {
-              console.error("Error getting download URL:", err);
-              toast.error("فشل في الحصول على رابط الملف بعد الرفع");
-              setIsUploading(false);
-              reject(err);
+              resolve(response.url);
+            } else {
+              throw new Error(response.message || "فشل الرفع على السيرفر");
             }
+          } else {
+            throw new Error(`Server error: ${xhr.status}`);
           }
-        );
-      } catch (error) {
-        console.error("Storage ref error:", error);
-        toast.error("حدث خطأ تقني في تهيئة الرفع");
+        };
+
+        xhr.onerror = () => {
+          throw new Error("Network error during upload");
+        };
+
+        xhr.open("POST", "/api/upload");
+        xhr.send(formData);
+
+      } catch (error: any) {
+        console.error("Upload error:", error);
+        toast.error(`فشل الرفع: ${error.message || "حدث خطأ غير متوقع"}`);
         setIsUploading(false);
+        setUploadProgress(0);
         reject(error);
       }
     });
@@ -681,14 +656,25 @@ export const AdminDashboard = () => {
                         )}
                         {settings.directorVideoUrl && (
                             <div className="mt-4 aspect-video rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg">
-                                <video 
-                                    src={settings.directorVideoUrl} 
-                                    className="w-full h-full object-cover" 
-                                    controls 
-                                    playsInline
-                                    preload="metadata"
-                                    key={settings.directorVideoUrl}
-                                />
+                                {settings.directorVideoUrl.includes('youtube.com') || settings.directorVideoUrl.includes('youtu.be') ? (
+                                    <iframe 
+                                        src={settings.directorVideoUrl.includes('watch?v=') 
+                                        ? settings.directorVideoUrl.replace('watch?v=', 'embed/') 
+                                        : settings.directorVideoUrl.replace('youtu.be/', 'youtube.com/embed/')
+                                        }
+                                        className="w-full h-full border-none"
+                                        allowFullScreen
+                                    />
+                                ) : (
+                                    <video 
+                                        src={settings.directorVideoUrl} 
+                                        className="w-full h-full object-cover" 
+                                        controls 
+                                        playsInline
+                                        preload="metadata"
+                                        key={settings.directorVideoUrl}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>
@@ -718,40 +704,39 @@ export const AdminDashboard = () => {
                 <div className="card-luxury p-6 md:p-8 space-y-6 bg-brand-navy border-none text-white overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 blur-3xl rounded-full" />
                     <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                        <Video className="text-brand-gold" size={24} />
-                        <h2 className="text-xl font-display font-black italic">مركز المساعدة والرفع الذكي</h2>
+                        <Upload className="text-brand-gold" size={24} />
+                        <h2 className="text-xl font-display font-black italic">نظام الرفع السحابي الجديد</h2>
                     </div>
                     <div className="space-y-6 relative z-10 text-right">
-                        <div>
-                            <h3 className="text-brand-gold font-bold mb-3 flex items-center justify-end gap-2">كيف ترفع فيديو بدون يوتيوب؟ <Plus size={16} /></h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <a href="https://streamable.com" target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
-                                    <Video className="text-brand-gold mb-2 group-hover:scale-110 transition-transform" size={24} />
-                                    <span className="text-xs font-bold">Streamable (الأسرع)</span>
-                                    <span className="text-[10px] text-white/40 mt-1">ارفع الفيديو واحصل على لينك فوراً</span>
-                                </a>
-                                <a href="https://file.io" target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
-                                    <Globe className="text-brand-gold mb-2 group-hover:scale-110 transition-transform" size={24} />
-                                    <span className="text-xs font-bold">File.io</span>
-                                    <span className="text-[10px] text-white/40 mt-1">للملفات السريعة والتحميل المباشر</span>
-                                </a>
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">لقد قمنا بتغيير نظام الرفع! <CheckCircle2 size={16} /></p>
+                            <p className="text-xs text-white/70 leading-relaxed italic">
+                                الآن لم تعد بحاجة لضبط إعدادات Firebase المعقدة. يمكنك الضغط على زر <b>"رفع من جهازك"</b> وسيقوم السيرفر الجديد بحفظ ملفاتك فوراً وتوفير رابط خاص بها.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex flex-col p-4 bg-white/5 border border-white/10 rounded-2xl">
+                                <div className="flex items-center justify-end gap-2 mb-2 text-brand-gold">
+                                    <span className="text-xs font-bold">الرفع المباشر</span>
+                                    <Upload size={16} />
+                                </div>
+                                <p className="text-[10px] text-white/50 leading-relaxed">اضغط على زر الرفع من جهازك واختر أي صورة أو فيديو بحد أقصى 50 ميجا بايت.</p>
+                            </div>
+                            <div className="flex flex-col p-4 bg-white/5 border border-white/10 rounded-2xl">
+                                <div className="flex items-center justify-end gap-2 mb-2 text-brand-gold">
+                                    <span className="text-xs font-bold">الروابط الخارجية</span>
+                                    <Globe size={16} />
+                                </div>
+                                <p className="text-[10px] text-white/50 leading-relaxed">إذا كان الفيديو كبيراً جداً (أكبر من 50 ميجا)، يفضل رفعه على يوتيوب ووضع الرابط.</p>
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex gap-4 justify-end">
-                                <p className="text-sm leading-relaxed"><b>المرحلة الأولى:</b> ارفع الفيديو على <b>Streamable</b> أو <b>YouTube</b>.</p>
-                                <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">1</div>
-                            </div>
-                            <div className="flex gap-4 justify-end">
-                                <p className="text-sm leading-relaxed"><b>المرحلة الثانية:</b> انسخ الرابط الذي يظهر لك وضعه في الخانة المخصصة عند إضافة مشروع.</p>
-                                <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">2</div>
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20">
-                            <p className="text-xs font-bold text-red-400 mb-1 flex items-center gap-2 justify-end"><HelpCircle size={14} /> إذا فشل الرفع التلقائي (Firebase):</p>
-                            <p className="text-[10px] text-white/60 leading-relaxed italic text-right">يرجى التأكد من تفعيل "Firebase Storage" من لوحة تحكم جوجل ووضع القواعد على (Allow Read/Write) لجميع المستخدمين المسجلين. إذا كنت لا تعرف كيف، استخدم <b>الروابط الخارجية</b> فهي أضمن وأسرع الآن.</p>
+                        <div className="p-4 bg-brand-gold/10 rounded-2xl border border-brand-gold/20">
+                            <p className="text-xs font-bold text-brand-gold mb-1 flex items-center gap-2 justify-end"><HelpCircle size={14} /> لماذا السيرفر الحالي أفضل؟</p>
+                            <p className="text-[10px] text-white/60 leading-relaxed italic text-right">
+                                السيرفر يدعم الرفع السريع ولا يحتاج لأي حسابات خارجية، ويقوم بصيانة وإصلاح الروابط تلقائياً لضمان عدم توقفها.
+                            </p>
                         </div>
                     </div>
                 </div>
