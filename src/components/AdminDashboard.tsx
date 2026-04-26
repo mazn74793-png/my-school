@@ -477,7 +477,13 @@ export const AdminDashboard = () => {
                         </div>
                         {settings.directorVideoUrl && (
                             <div className="mt-2 aspect-video rounded-xl overflow-hidden border border-black/5 bg-black">
-                                <video src={settings.directorVideoUrl} className="w-full h-full object-cover" controls />
+                                <video 
+                                    src={settings.directorVideoUrl} 
+                                    className="w-full h-full object-cover" 
+                                    controls 
+                                    playsInline
+                                    preload="metadata"
+                                />
                             </div>
                         )}
                     </div>

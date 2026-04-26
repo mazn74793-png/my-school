@@ -25,7 +25,10 @@ const Navbar = ({ onAdminClick, user, settings }: { onAdminClick: () => void, us
     <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? "bg-white/80 backdrop-blur-xl py-3 shadow-sm border-b border-black/5" : "bg-transparent py-6"}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <div className="flex items-center gap-3 md:gap-4 shrink-0">
-          <div className="flex flex-col min-w-0">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-white flex items-center justify-center p-0.5 border border-black/5 shadow-sm shrink-0">
+            <img src={settings.logoUrl || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col min-w-0 text-right">
             <motion.span 
               animate={{ opacity: [1, 0.5, 1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -105,10 +108,14 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
           <GraduationCap size={16} />
           مدرسة التميز والإبداع
         </motion.div>
-        <h1 className="text-6xl md:text-8xl lg:text-9xl font-display italic font-black text-brand-navy mb-8 leading-[0.85] tracking-tighter">
+        <motion.h1 
+          animate={{ opacity: [1, 0.7, 1] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="text-6xl md:text-8xl lg:text-9xl font-display italic font-black text-brand-navy mb-8 leading-[0.85] tracking-tighter"
+        >
           {settings.heroTitle} <br />
           <span className="text-brand-gold">{settings.heroSubtitle}</span>
-        </h1>
+        </motion.h1>
         <p className="text-lg md:text-xl text-brand-navy/60 max-w-lg mb-10 leading-relaxed font-serif italic">
           {settings.heroDescription}
         </p>
@@ -188,7 +195,7 @@ const App = () => {
     aboutTitle: "رؤيتنا التعليمية",
     aboutDescription: "نحن في مدرسة محمد أنور السادات نبذل قصارى جهدنا لتحويل التحديات إلى فرص والطلاب إلى قادة.",
     directorName: "أ. عوني الهواري",
-    aboutImageUrl: "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800"
+    aboutImageUrl: "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=100&w=1200"
   });
 
   useEffect(() => {
@@ -255,25 +262,35 @@ const App = () => {
             transition={{ duration: 0.8, ease: "easeInOut" }}
             className="fixed inset-0 z-[500] bg-brand-navy flex flex-col items-center justify-center gap-8"
           >
-            <div className="flex flex-col items-center">
-              <motion.h1 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: [1, 0.4, 1], y: 0 }}
-                transition={{ 
-                  opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                  y: { delay: 0.5 }
-                }}
-                className="text-white font-display text-4xl md:text-5xl lg:text-6xl font-black tracking-widest italic text-center px-6"
+            <div className="flex flex-col items-center gap-8">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: [1, 1.1, 1], opacity: 1 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="w-32 h-32 rounded-full bg-white p-2 shadow-2xl overflow-hidden"
               >
-                {settings.schoolName}
-              </motion.h1>
-              <div className="w-48 h-1 bg-white/10 rounded-full mt-10 overflow-hidden">
-                <motion.div 
-                  initial={{ x: "-100%" }}
-                  animate={{ x: "100%" }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="w-full h-full bg-brand-gold"
-                />
+                <img src={settings.logoUrl || DEFAULT_LOGO} alt="Loading..." className="w-full h-full object-contain" />
+              </motion.div>
+              <div className="flex flex-col items-center">
+                <motion.h1 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: [1, 0.4, 1], y: 0 }}
+                  transition={{ 
+                    opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                    y: { delay: 0.5 }
+                  }}
+                  className="text-white font-display text-4xl md:text-5xl lg:text-6xl font-black tracking-widest italic text-center px-6"
+                >
+                  {settings.schoolName}
+                </motion.h1>
+                <div className="w-48 h-1 bg-white/10 rounded-full mt-10 overflow-hidden">
+                  <motion.div 
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "100%" }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-full h-full bg-brand-gold"
+                  />
+                </div>
               </div>
             </div>
           </motion.div>
@@ -313,6 +330,8 @@ const App = () => {
                 src={settings.directorVideoUrl} 
                 controls 
                 autoPlay 
+                playsInline
+                preload="auto"
                 className="w-full h-full"
               />
             </motion.div>
@@ -510,7 +529,10 @@ const App = () => {
       <footer className="py-24 px-6 border-t border-black/5 bg-white">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
            <div className="flex items-center gap-4 md:gap-6 shrink-0">
-              <div className="text-right md:text-left min-w-0">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-white flex items-center justify-center p-1 border border-black/5 shadow-sm shrink-0">
+                <img src={settings.logoUrl || DEFAULT_LOGO} alt="Final Logo" className="w-full h-full object-contain" />
+              </div>
+              <div className="text-right min-w-0">
                 <motion.p 
                   animate={{ opacity: [1, 0.6, 1] }}
                   transition={{ duration: 6, repeat: Infinity }}
