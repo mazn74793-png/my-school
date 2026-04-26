@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project or Achievement",
+      "description": "Represents an entry in the portfolio, which could be a project, image, or video.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["project", "image", "video"] },
+        "level": { "type": "string", "enum": ["primary", "preparatory", "secondary", "all"] },
+        "mediaUrl": { "type": "string" },
+        "techStack": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["title", "type", "mediaUrl", "createdAt", "authorId"]
+    },
+    "Setting": {
+        "title": "App Settings",
+        "description": "Global application settings like school name, logo URL etc.",
+        "type": "object",
+        "properties": {
+            "schoolName": { "type": "string" },
+            "logoUrl": { "type": "string" },
+            "heroTitle": { "type": "string" },
+            "heroSubtitle": { "type": "string" },
+            "heroDescription": { "type": "string" },
+            "aboutTitle": { "type": "string" },
+            "aboutDescription": { "type": "string" },
+            "directorName": { "type": "string" },
+            "aboutImageUrl": { "type": "string" }
+        }
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Collection of all items shown on the website."
+    },
+    "/settings/{settingId}": {
+        "schema": "Setting",
+        "description": "Global settings for the portfolio."
+    }
+  }
+}
