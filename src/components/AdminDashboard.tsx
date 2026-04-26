@@ -67,17 +67,23 @@ export const AdminDashboard = () => {
 
       if (!storage) {
         toast.error("Firebase Storage is not initialized");
+        console.error("Storage object is null or undefined");
         reject("Storage not found");
         return;
       }
+      
+      console.log("Storage bucket:", (storage as any)._bucket);
       
       setIsUploading(true);
       setUploadProgress(0);
 
       try {
-        // Use a simpler path first to see if it helps
-        const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const storageRef = ref(storage, `uploads/${fileName}`);
+        // Clean filename and ensure it's not too long
+        const timestamp = Date.now();
+        const safeName = file.name.substring(0, 50).replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `uploads/${timestamp}-${safeName}`);
+        console.log("Storage ref created:", storageRef.fullPath);
+        
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         uploadTask.on(
@@ -139,11 +145,19 @@ export const AdminDashboard = () => {
     const checkAdmin = async () => {
         if (!auth.currentUser) return;
         try {
-            await getDoc(doc(db, "settings", "test_admin_rights"));
-            setIsAdminConfirmed(true);
+            // Self-register as admin if email matches
+            if (auth.currentUser.email?.toLowerCase() === "motaem23y@gmail.com") {
+                await setDoc(doc(db, "admins", auth.currentUser.uid), {
+                    email: auth.currentUser.email,
+                    registeredAt: serverTimestamp()
+                }, { merge: true });
+                setIsAdminConfirmed(true);
+            } else {
+                const adminSnap = await getDoc(doc(db, "admins", auth.currentUser.uid));
+                if (adminSnap.exists()) setIsAdminConfirmed(true);
+            }
         } catch (e) {
-            console.log("Admin rights check:", e);
-            // We don't toast error here, just for UI status
+            console.log("Admin registration check failed:", e);
         }
     };
     checkAdmin();
@@ -229,16 +243,27 @@ export const AdminDashboard = () => {
   };
 
   const handleForceRepair = async () => {
-    if (confirm("سيقوم هذا بمحاولة إعادة تحديث البيانات من السيرفر وحل مشاكل العرض. هل أنت متأكد؟")) {
+    if (confirm("سيقوم هذا بمحاولة إعادة تحديث البيانات من السيرفر وحل مشاكل الصلاحيات. هل أنت متأكد؟")) {
         setLoading(true);
-        // We just need to re-trigger the fetchSettings, the onSnapshot for projects is already active
+        if (auth.currentUser && auth.currentUser.email?.toLowerCase() === "motaem23y@gmail.com") {
+             try {
+                 await setDoc(doc(db, "admins", auth.currentUser.uid), {
+                    email: auth.currentUser.email,
+                    registeredAt: serverTimestamp()
+                 }, { merge: true });
+                 setIsAdminConfirmed(true);
+                 toast.success("تم تأكيد وضع المسؤول بنجاح");
+             } catch (e) {
+                 toast.error("فشل تأكيد وضع المسؤول");
+             }
+        }
+        
         const docRef = doc(db, "settings", "global");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             setSettings(docSnap.data() as SiteSettings);
         }
         setLoading(false);
-        toast.success("تم تحديث البيانات");
     }
   };
 
@@ -484,9 +509,13 @@ export const AdminDashboard = () => {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg md:text-xl font-display font-black italic">الأعمال المنشورة</h2>
-                        <div className="flex items-center gap-2">
-                             {isAdminConfirmed && <span className="text-[8px] bg-green-500/10 text-green-600 px-2 py-1 rounded font-bold">Admin Verified</span>}
-                             <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-black/5">{projects.length} عمل</span>
+                        <div className="flex flex-col items-end">
+                             <div className="flex items-center gap-2">
+                                  {isAdminConfirmed && <span className="text-[8px] bg-green-500/10 text-green-600 px-2 py-1 rounded font-bold">Admin Verified</span>}
+                                  <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-black/5">{projects.length} عمل</span>
+                             </div>
+                             <span className="text-[8px] text-brand-navy/30 mt-1">{auth.currentUser?.email}</span>
+                             <span className="text-[8px] text-brand-navy/20 font-mono">{auth.currentUser?.uid}</span>
                         </div>
                     </div>
                     
