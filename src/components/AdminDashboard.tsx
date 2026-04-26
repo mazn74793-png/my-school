@@ -433,9 +433,14 @@ export const AdminDashboard = () => {
                                                     const loadingId = toast.loading("جاري الرفع...");
                                                     try {
                                                         await handleFileUpload(file, (url) => {
-                                                            setNewProject(p => ({ ...p, mediaUrl: url }));
+                                                            const fullUrl = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+                                                            setNewProject(p => ({ 
+                                                                ...p, 
+                                                                mediaUrl: fullUrl,
+                                                                type: file.type.startsWith('video') ? 'video' : (p.type === 'video' ? 'image' : p.type)
+                                                            }));
                                                         });
-                                                        toast.success("تم الرفع بنجاح!", { id: loadingId });
+                                                        toast.success("تم الرفع بنجاح! الرابط جاهز في المعاينة.", { id: loadingId });
                                                     } catch (error) {
                                                         // Error handled in handleFileUpload
                                                     }
@@ -597,7 +602,10 @@ export const AdminDashboard = () => {
                         <div className="flex gap-2">
                             <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.logoUrl} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
                             <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy">
-                                <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} />
+                                <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => {
+                                    const fullUrl = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+                                    setSettings(s => ({ ...s, logoUrl: fullUrl }));
+                                })} />
                                 <Upload size={18} />
                             </label>
                         </div>
@@ -626,7 +634,8 @@ export const AdminDashboard = () => {
                                             const loadingId = toast.loading("جاري بدأ الرفع...");
                                             try {
                                                 await handleFileUpload(file, (url) => {
-                                                    setSettings(s => ({ ...s, directorVideoUrl: url }));
+                                                    const fullUrl = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+                                                    setSettings(s => ({ ...s, directorVideoUrl: fullUrl }));
                                                 });
                                                 toast.success("تم رفع الفيديو بنجاح!", { id: loadingId });
                                             } catch (error) {
@@ -683,7 +692,10 @@ export const AdminDashboard = () => {
                         <div className="flex gap-2">
                             <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.aboutImageUrl} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
                             <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy">
-                                <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, aboutImageUrl: url })))} />
+                                <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => {
+                                    const fullUrl = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+                                    setSettings(s => ({ ...s, aboutImageUrl: fullUrl }));
+                                })} />
                                 <Upload size={18} />
                             </label>
                         </div>

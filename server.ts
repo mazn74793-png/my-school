@@ -3,27 +3,21 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import multer from "multer";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
+import streamifier from "streamifier";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Configure Multer (Memory Storage for Cloudinary)
+const storage = multer.memoryStorage();
 const upload = multer({ 
   storage,
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
@@ -34,15 +28,46 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
-  app.use("/uploads", express.static(uploadDir));
 
-  // Upload API
-  app.post("/api/upload", upload.single("file"), (req: any, res) => {
+  // Upload API using Cloudinary
+  app.post("/api/upload", upload.single("file"), async (req: any, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: "No file uploaded" });
     }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    res.json({ success: true, url: fileUrl });
+
+    try {
+      const streamUpload = (req: any) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "website_uploads",
+              resource_type: "auto", // Automatically detect if it's an image or video
+            },
+            (error, result) => {
+              if (result) {
+                resolve(result);
+              } else {
+                reject(error);
+              }
+            }
+          );
+          streamifier.createReadStream(req.file.buffer).pipe(stream);
+        });
+      };
+
+      const result: any = await streamUpload(req);
+      res.json({ 
+        success: true, 
+        url: result.secure_url,
+        public_id: result.public_id
+      });
+    } catch (error: any) {
+      console.error("Cloudinary Upload Error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to upload to cloud storage" 
+      });
+    }
   });
 
   app.post("/api/contact", (req, res) => {
