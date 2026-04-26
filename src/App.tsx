@@ -464,23 +464,6 @@ const App = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((project, index) => (
-                <ProjectCard 
-                  key={project.id} 
-                  project={project} 
-                  index={index} 
-                  onClick={() => setSelectedProject(project)}
-                />
-            ))}
-        </div>
-
-        {filteredProjects.length === 0 && !loading && (
-          <div className="py-40 text-center">
-            <p className="text-brand-navy/30 italic text-2xl">لا توجد مشاريع تطابق بحثك حالياً...</p>
-          </div>
-        )}
-
         {loading ? (
           <div className="flex justify-center py-40">
             <motion.div 
