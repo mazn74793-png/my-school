@@ -449,7 +449,8 @@ const App = () => {
               {[
                   { id: "all", label: "الكل" },
                   { id: "secondary", label: "ثانوي" },
-                  { id: "intermediate", label: "إعدادي" }
+                  { id: "preparatory", label: "إعدادي" },
+                  { id: "primary", label: "ابتدائي" }
               ].map(lvl => (
                   <button 
                       key={lvl.id}
