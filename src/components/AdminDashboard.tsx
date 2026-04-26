@@ -96,10 +96,16 @@ export const AdminDashboard = () => {
           (error) => {
             console.error("Firebase Upload Error Detail:", error);
             let msg = "فشل الرفع";
-            if (error.code === 'storage/unauthorized') msg = "غير مصرح لك بالرفع. راجع قواعد Firebase Storage.";
-            else if (error.code === 'storage/quota-exceeded') msg = "تم تجاوز حصة التخزين المجانية.";
+            if (error.code === 'storage/unauthorized') {
+                msg = "مشكلة في صلاحيات Firebase Storage. يرجى تفعيل الرفع من لوحة تحكم Firebase وتغيير القواعد (Rules) للسماح بالرفع.";
+                toast.error(msg, { duration: 6000 });
+            } else if (error.code === 'storage/quota-exceeded') {
+                msg = "تم تجاوز حصة التخزين المجانية.";
+                toast.error(msg);
+            } else {
+                toast.error(`خطأ: ${error.message}`);
+            }
             
-            toast.error(`${msg}: ${error.message}`);
             setIsUploading(false);
             reject(error);
           },
@@ -419,19 +425,25 @@ export const AdminDashboard = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط الصورة أو الفيديو</label>
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30">رابط أو رفع ملف</label>
+                                    <div className="flex gap-2">
+                                        <a href="https://streamable.com" target="_blank" rel="noreferrer" className="text-[8px] bg-brand-gold/10 text-brand-gold px-2 py-0.5 rounded-full font-bold hover:bg-brand-gold/20 transition-all">تحويل فيديو لرابط</a>
+                                        <a href="https://postimages.org" target="_blank" rel="noreferrer" className="text-[8px] bg-brand-navy/5 text-brand-navy/60 px-2 py-0.5 rounded-full font-bold hover:bg-brand-navy/10 transition-all">تحويل صورة لرابط</a>
+                                    </div>
+                                </div>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
                                         <input 
-                                            placeholder="انسخ الرابط أو ارفع ملفاً..."
-                                            className="w-full bg-brand-paper border border-black/5 rounded-2xl py-3 px-4 focus:border-brand-gold outline-none font-mono text-xs"
+                                            placeholder="انسخ الرابط من المواقع أعلاه وضعه هنا..."
+                                            className="w-full bg-brand-paper border border-black/5 rounded-2xl py-3 px-4 focus:border-brand-gold outline-none font-mono text-xs text-right"
                                             value={newProject.mediaUrl}
                                             onChange={e => setNewProject({...newProject, mediaUrl: e.target.value})}
                                             required
                                         />
                                         <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/10" size={14} />
                                     </div>
-                                    <label className="shrink-0 cursor-pointer w-12 h-12 bg-brand-navy/5 hover:bg-brand-gold/10 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy transition-all relative">
+                                    <label className="shrink-0 cursor-pointer w-12 h-12 bg-brand-navy/5 hover:bg-brand-gold/10 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy transition-all relative group">
                                         <input 
                                             type="file" 
                                             className="hidden" 
@@ -447,7 +459,7 @@ export const AdminDashboard = () => {
                                                         });
                                                         toast.success("تم الرفع بنجاح!", { id: loadingId });
                                                     } catch (error) {
-                                                        toast.error("فشل الرفع", { id: loadingId });
+                                                        // Error is handled in handleFileUpload
                                                     }
                                                 }
                                             }}
@@ -458,11 +470,14 @@ export const AdminDashboard = () => {
                                                 <span className="text-[8px] mt-1 font-bold">{uploadProgress}%</span>
                                             </div>
                                         ) : (
-                                            <Upload size={18} />
+                                            <div className="flex flex-col items-center">
+                                                <Upload size={18} />
+                                                <span className="text-[7px] mt-1 opacity-0 group-hover:opacity-100 font-bold">رفع مباشر</span>
+                                            </div>
                                         )}
                                     </label>
                                 </div>
-                                <p className="text-[8px] text-brand-navy/40 px-2 italic">يمكنك رفع الصور والفيديوهات مباشرة من هاتفك</p>
+                                <p className="text-[8px] text-brand-navy/40 px-2 italic">يفضل استخدام (Streamable) للفيديوهات الكبيرة لضمان سرعة الموقع</p>
                             </div>
                         </div>
 
@@ -682,24 +697,39 @@ export const AdminDashboard = () => {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 blur-3xl rounded-full" />
                     <div className="flex items-center gap-3 border-b border-white/10 pb-4">
                         <Video className="text-brand-gold" size={24} />
-                        <h2 className="text-xl font-display font-black italic">كيف تحصل على رابط للفيديو؟</h2>
+                        <h2 className="text-xl font-display font-black italic">مركز المساعدة والرفع الذكي</h2>
                     </div>
-                    <div className="space-y-4 relative z-10 text-right">
-                        <div className="flex gap-4 justify-end">
-                            <p className="text-sm leading-relaxed"><b>الخيار الأول (الأسرع):</b> ارفع الفيديو على موقع <b>streamable.com</b> وانسخ الرابط الناتج. هذا يحول أي فيديو من هاتفك إلى لينك فوراً.</p>
-                            <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">1</div>
+                    <div className="space-y-6 relative z-10 text-right">
+                        <div>
+                            <h3 className="text-brand-gold font-bold mb-3 flex items-center justify-end gap-2">كيف ترفع فيديو بدون يوتيوب؟ <Plus size={16} /></h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <a href="https://streamable.com" target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
+                                    <Video className="text-brand-gold mb-2 group-hover:scale-110 transition-transform" size={24} />
+                                    <span className="text-xs font-bold">Streamable (الأسرع)</span>
+                                    <span className="text-[10px] text-white/40 mt-1">ارفع الفيديو واحصل على لينك فوراً</span>
+                                </a>
+                                <a href="https://file.io" target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
+                                    <Globe className="text-brand-gold mb-2 group-hover:scale-110 transition-transform" size={24} />
+                                    <span className="text-xs font-bold">File.io</span>
+                                    <span className="text-[10px] text-white/40 mt-1">للملفات السريعة والتحميل المباشر</span>
+                                </a>
+                            </div>
                         </div>
-                        <div className="flex gap-4 justify-end">
-                            <p className="text-sm leading-relaxed"><b>الخيار الثاني (الاحترافي):</b> ارفع الفيديو على <b>YouTube</b> وانسخ الرابط. تأكد من ضبط الخصوصية على "غير مدرج" (Unlisted).</p>
-                            <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">2</div>
+
+                        <div className="space-y-4">
+                            <div className="flex gap-4 justify-end">
+                                <p className="text-sm leading-relaxed"><b>المرحلة الأولى:</b> ارفع الفيديو على <b>Streamable</b> أو <b>YouTube</b>.</p>
+                                <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">1</div>
+                            </div>
+                            <div className="flex gap-4 justify-end">
+                                <p className="text-sm leading-relaxed"><b>المرحلة الثانية:</b> انسخ الرابط الذي يظهر لك وضعه في الخانة المخصصة عند إضافة مشروع.</p>
+                                <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">2</div>
+                            </div>
                         </div>
-                        <div className="flex gap-4 justify-end">
-                            <p className="text-sm leading-relaxed"><b>الخيار الثالث (تيليجرام):</b> أرسل الفيديو لنفسك على تيليجرام ثم استخدم بوت مثل @Files2LinkBot للحصول على رابط مباشر يبدأ بـ http.</p>
-                            <div className="w-8 h-8 rounded-full bg-white/10 text-brand-gold flex items-center justify-center font-bold text-sm shrink-0">3</div>
-                        </div>
-                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                            <p className="text-xs font-bold text-brand-gold mb-1 flex items-center gap-2 justify-end"><HelpCircle size={14} /> ملاحظة هامة:</p>
-                            <p className="text-[10px] text-white/60 leading-relaxed italic text-right">استخدام الروابط (Links) أفضل بكثير لأنه يجعل الموقع يفتح بسرعة فائقة ولا يأخذ مساحة من ذاكرة الموقع، كما أن الروابط تضمن بقاء الفيديوهات بجودة عالية (HD).</p>
+
+                        <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20">
+                            <p className="text-xs font-bold text-red-400 mb-1 flex items-center gap-2 justify-end"><HelpCircle size={14} /> إذا فشل الرفع التلقائي (Firebase):</p>
+                            <p className="text-[10px] text-white/60 leading-relaxed italic text-right">يرجى التأكد من تفعيل "Firebase Storage" من لوحة تحكم جوجل ووضع القواعد على (Allow Read/Write) لجميع المستخدمين المسجلين. إذا كنت لا تعرف كيف، استخدم <b>الروابط الخارجية</b> فهي أضمن وأسرع الآن.</p>
                         </div>
                     </div>
                 </div>
