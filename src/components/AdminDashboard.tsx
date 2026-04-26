@@ -6,6 +6,43 @@ import { Project, ProjectType, SiteSettings, EducationLevel } from "../types";
 import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 const DEFAULT_ABOUT_IMAGE = "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800";
 
 export const AdminDashboard = () => {
@@ -114,6 +151,7 @@ export const AdminDashboard = () => {
       toast.success("تم الإضافة بنجاح!");
     } catch (error) {
       console.error(error);
+      handleFirestoreError(error, OperationType.CREATE, "projects");
       toast.error("فشل في الإضافة");
     }
   };
@@ -124,6 +162,7 @@ export const AdminDashboard = () => {
           await setDoc(doc(db, "settings", "global"), settings);
           toast.success("تم حفظ الإعدادات!");
       } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, "settings/global");
           toast.error("فشل في حفظ الإعدادات");
       }
   };
@@ -134,6 +173,7 @@ export const AdminDashboard = () => {
         await deleteDoc(doc(db, "projects", id));
         toast.success("تم الحذف");
       } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `projects/${id}`);
         toast.error("فشل في الحذف");
       }
     }
@@ -428,10 +468,18 @@ export const AdminDashboard = () => {
                         <div className="flex gap-2">
                             <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.directorVideoUrl || ""} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} placeholder="رابط فيديو ترحيبي..." />
                             <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy">
-                                <input type="file" className="hidden" accept="video/*" onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorVideoUrl: url })))} />
+                                <input type="file" className="hidden" accept="video/*" onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleFileUpload(file, (url) => setSettings(s => ({ ...s, directorVideoUrl: url })));
+                                }} />
                                 <Upload size={18} />
                             </label>
                         </div>
+                        {settings.directorVideoUrl && (
+                            <div className="mt-2 aspect-video rounded-xl overflow-hidden border border-black/5 bg-black">
+                                <video src={settings.directorVideoUrl} className="w-full h-full object-cover" controls />
+                            </div>
+                        )}
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط صورة الرؤية</label>

@@ -25,11 +25,14 @@ const Navbar = ({ onAdminClick, user, settings }: { onAdminClick: () => void, us
     <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? "bg-white/80 backdrop-blur-xl py-3 shadow-sm border-b border-black/5" : "bg-transparent py-6"}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <div className="flex items-center gap-3 md:gap-4 shrink-0">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-white flex items-center justify-center p-0.5 border border-black/5 shadow-sm shrink-0">
-            <img src={settings.logoUrl || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
-          </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-bold text-sm md:text-lg tracking-tighter text-brand-navy truncate whitespace-nowrap">{settings.schoolName}</span>
+            <motion.span 
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="font-bold text-sm md:text-lg tracking-tighter text-brand-navy truncate whitespace-nowrap"
+            >
+              {settings.schoolName}
+            </motion.span>
             <span className="text-[8px] md:text-[10px] text-brand-gold uppercase tracking-[0.1em] md:tracking-[0.2em] font-mono leading-none">Portfolio</span>
           </div>
         </div>
@@ -131,36 +134,34 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
       
       <div className="relative flex flex-col items-center order-1 lg:order-2">
         <motion.div 
-           initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-           animate={{ opacity: 1, scale: 1, rotate: 0 }}
-           transition={{ duration: 1.5, type: "spring", bounce: 0.4 }}
-           className="relative z-10 w-full aspect-square max-w-[500px]"
+           initial={{ opacity: 0, scale: 0.8 }}
+           animate={{ opacity: 1, scale: 1 }}
+           transition={{ duration: 1.5, type: "spring" }}
+           className="relative z-10 w-full flex items-center justify-center py-20"
         >
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.03, 1],
-              rotateY: [0, 5, 0]
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="w-full h-full p-4 border-[12px] border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-full bg-white flex items-center justify-center overflow-hidden"
+          <motion.h2 
+            animate={{ opacity: [1, 0.3, 1] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="text-white text-9xl font-display font-black italic select-none pointer-events-none opacity-5 mix-blend-overlay absolute inset-0 flex items-center justify-center text-center leading-none"
           >
-            <img 
-              src={settings.logoUrl || DEFAULT_LOGO} 
-              alt="School Logo" 
-              className="w-full h-full object-contain scale-110"
-            />
-          </motion.div>
-          {/* Decorative Elements */}
+            {settings.schoolName}
+          </motion.h2>
+          <div className="text-center relative z-10">
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.1, 1],
+                opacity: [1, 0.6, 1]
+              }}
+              transition={{ duration: 4, repeat: Infinity }}
+              className="px-8 py-4 bg-white/50 backdrop-blur-sm border border-black/5 rounded-3xl shadow-xl"
+            >
+              <p className="text-brand-gold font-mono text-xs uppercase tracking-[0.4em] mb-2">Director</p>
+              <p className="font-display italic font-black text-4xl text-brand-navy">{settings.directorName}</p>
+            </motion.div>
+          </div>
+
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-gold/10 rounded-full blur-3xl animate-pulse" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-navy/5 rounded-full blur-3xl animate-pulse" />
-        </motion.div>
-        <motion.div 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            className="mt-8 text-center"
-        >
-          <p className="text-brand-gold font-mono text-[10px] uppercase tracking-[0.4em] mb-1">Director</p>
-          <p className="font-display italic font-black text-2xl text-brand-navy">{settings.directorName}</p>
         </motion.div>
       </div>
     </div>
@@ -254,24 +255,19 @@ const App = () => {
             transition={{ duration: 0.8, ease: "easeInOut" }}
             className="fixed inset-0 z-[500] bg-brand-navy flex flex-col items-center justify-center gap-8"
           >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: [0.8, 1.1, 1], opacity: 1 }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              className="w-32 h-32 rounded-full bg-white p-2 shadow-2xl overflow-hidden"
-            >
-              <img src={settings.logoUrl || DEFAULT_LOGO} alt="Loading..." className="w-full h-full object-contain" />
-            </motion.div>
             <div className="flex flex-col items-center">
               <motion.h1 
                 initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="text-white font-display text-2xl font-bold tracking-widest italic"
+                animate={{ opacity: [1, 0.4, 1], y: 0 }}
+                transition={{ 
+                  opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                  y: { delay: 0.5 }
+                }}
+                className="text-white font-display text-4xl md:text-5xl lg:text-6xl font-black tracking-widest italic text-center px-6"
               >
                 {settings.schoolName}
               </motion.h1>
-              <div className="w-48 h-1 bg-white/10 rounded-full mt-4 overflow-hidden">
+              <div className="w-48 h-1 bg-white/10 rounded-full mt-10 overflow-hidden">
                 <motion.div 
                   initial={{ x: "-100%" }}
                   animate={{ x: "100%" }}
@@ -514,11 +510,14 @@ const App = () => {
       <footer className="py-24 px-6 border-t border-black/5 bg-white">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
            <div className="flex items-center gap-4 md:gap-6 shrink-0">
-              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-white flex items-center justify-center p-1 border border-black/5 shadow-sm shrink-0">
-                <img src={settings.logoUrl || DEFAULT_LOGO} alt="Final Logo" className="w-full h-full object-contain" />
-              </div>
               <div className="text-right md:text-left min-w-0">
-                <p className="font-bold text-sm md:text-base text-brand-navy whitespace-nowrap truncate">{settings.schoolName}</p>
+                <motion.p 
+                  animate={{ opacity: [1, 0.6, 1] }}
+                  transition={{ duration: 6, repeat: Infinity }}
+                  className="font-bold text-sm md:text-base text-brand-navy whitespace-nowrap truncate"
+                >
+                  {settings.schoolName}
+                </motion.p>
                 <p className="text-[10px] text-brand-gold font-mono uppercase tracking-widest">Built with Passion</p>
               </div>
            </div>
