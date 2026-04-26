@@ -396,35 +396,55 @@ const App = () => {
 
       {/* About Section */}
       <section id="about" className="py-32 px-6 max-w-7xl mx-auto border-t border-black/5">
-        <div className="flex flex-col items-center max-w-4xl mx-auto text-center">
-            <span className="text-[10px] font-mono text-brand-gold uppercase tracking-[0.4em] mb-4">Values & Vision</span>
-            <h2 className="text-6xl md:text-8xl font-display font-black italic text-brand-navy mb-12">{settings.aboutTitle}</h2>
-            
-            <div className="relative">
-                <div className="absolute -top-20 -left-20 w-40 h-40 bg-brand-gold/5 rounded-full blur-3xl" />
-                <p className="text-3xl md:text-4xl text-brand-navy font-serif italic leading-relaxed relative z-10">
-                  {settings.aboutDescription}
-                </p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-24 items-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="lg:col-span-5 relative"
+          >
+            <div className="tilted-card card-luxury aspect-[3/4] overflow-hidden rounded-3xl shadow-2xl">
+              <img 
+                src={settings.aboutImageUrl || "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800"} 
+                alt="Education" 
+                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
+              />
             </div>
+            <div className="absolute -bottom-10 -right-10 bg-brand-navy p-10 rounded-3xl text-white shadow-2xl">
+               <Trophy size={40} className="text-brand-gold mb-4" />
+               <p className="text-3xl font-display font-black italic">Rank #1</p>
+               <p className="text-xs uppercase tracking-widest text-white/50">Top Secondary School</p>
+            </div>
+            {/* Decorative dots or elements */}
+            <div className="absolute -top-10 -left-10 w-32 h-32 bg-brand-gold/5 rounded-full blur-3xl -z-10" />
+          </motion.div>
 
-            <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-12 w-full pt-12 border-t border-black/5">
-               <div className="text-center">
-                 <p className="text-5xl font-display font-black italic text-brand-navy">1500+</p>
-                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">Students</p>
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="lg:col-span-7 flex flex-col items-end"
+          >
+            <span className="text-[10px] font-mono text-brand-gold uppercase tracking-[0.4em] mb-4">Values & Vision</span>
+            <h2 className="text-6xl font-display font-black italic text-brand-navy mb-8 text-right">{settings.aboutTitle}</h2>
+            <p className="text-2xl text-brand-navy/70 leading-relaxed text-right font-serif">
+              {settings.aboutDescription}
+            </p>
+            <div className="mt-12 flex gap-12 w-full justify-end border-t border-black/5 pt-8">
+               <div className="text-right">
+                 <p className="text-4xl font-display font-black italic text-brand-navy">1500+</p>
+                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest">Students</p>
                </div>
-               <div className="text-center">
-                 <p className="text-5xl font-display font-black italic text-brand-navy">50+</p>
-                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">STEM Projects</p>
+               <div className="text-right">
+                 <p className="text-4xl font-display font-black italic text-brand-navy">50+</p>
+                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest">STEM Projects</p>
                </div>
-               <div className="text-center">
-                 <p className="text-5xl font-display font-black italic text-brand-navy">100%</p>
-                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">Commitment</p>
-               </div>
-               <div className="text-center">
-                 <p className="text-5xl font-display font-black italic text-brand-navy">#1</p>
-                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest mt-2">Ranking</p>
+               <div className="text-right">
+                 <p className="text-4xl font-display font-black italic text-brand-navy">100%</p>
+                 <p className="text-xs text-brand-navy/40 uppercase font-mono tracking-widest">Commitment</p>
                </div>
             </div>
+          </motion.div>
         </div>
       </section>
 

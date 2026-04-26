@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { db, auth, storage } from "../lib/firebase";
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
@@ -57,9 +57,17 @@ export const AdminDashboard = () => {
   
   const handleFileUpload = (file: File, callback: (url: string) => void): Promise<string> => {
     return new Promise((resolve, reject) => {
+      console.log("Starting upload for file:", file.name, "size:", file.size);
+      
       if (!auth.currentUser) {
         toast.error("يجب تسجيل الدخول أولاً");
         reject("Not authenticated");
+        return;
+      }
+
+      if (!storage) {
+        toast.error("Firebase Storage is not initialized");
+        reject("Storage not found");
         return;
       }
       
@@ -67,31 +75,40 @@ export const AdminDashboard = () => {
       setUploadProgress(0);
 
       try {
-        const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
+        // Use a simpler path first to see if it helps
+        const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const storageRef = ref(storage, `uploads/${fileName}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         uploadTask.on(
           "state_changed",
           (snapshot) => {
             const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            console.log("Upload progress:", progress, "%");
             setUploadProgress(progress);
           },
           (error) => {
-            console.error("Upload error:", error);
-            toast.error("فشل رفع الملف: " + error.message);
+            console.error("Firebase Upload Error Detail:", error);
+            let msg = "فشل الرفع";
+            if (error.code === 'storage/unauthorized') msg = "غير مصرح لك بالرفع. راجع قواعد Firebase Storage.";
+            else if (error.code === 'storage/quota-exceeded') msg = "تم تجاوز حصة التخزين المجانية.";
+            
+            toast.error(`${msg}: ${error.message}`);
             setIsUploading(false);
             reject(error);
           },
           async () => {
             try {
+              console.log("Upload complete, getting download URL...");
               const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              console.log("Download URL obtained:", downloadURL);
               callback(downloadURL);
               setIsUploading(false);
               setUploadProgress(0);
               resolve(downloadURL);
             } catch (err) {
               console.error("Error getting download URL:", err);
-              toast.error("فشل في الحصول على رابط الملف");
+              toast.error("فشل في الحصول على رابط الملف بعد الرفع");
               setIsUploading(false);
               reject(err);
             }
@@ -99,7 +116,7 @@ export const AdminDashboard = () => {
         );
       } catch (error) {
         console.error("Storage ref error:", error);
-        toast.error("حدث خطأ أثناء الرفع");
+        toast.error("حدث خطأ تقني في تهيئة الرفع");
         setIsUploading(false);
         reject(error);
       }
@@ -359,17 +376,35 @@ export const AdminDashboard = () => {
                                         />
                                         <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/10" size={14} />
                                     </div>
-                                    <label className="shrink-0 cursor-pointer w-12 h-12 bg-brand-navy/5 hover:bg-brand-gold/10 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy transition-all">
+                                    <label className="shrink-0 cursor-pointer w-12 h-12 bg-brand-navy/5 hover:bg-brand-gold/10 border border-black/5 rounded-2xl flex items-center justify-center text-brand-navy transition-all relative">
                                         <input 
                                             type="file" 
                                             className="hidden" 
                                             accept={newProject.type === 'video' ? 'video/*' : 'image/*'}
-                                            onChange={(e) => {
+                                            disabled={isUploading}
+                                            onChange={async (e) => {
                                                 const file = e.target.files?.[0];
-                                                if (file) handleFileUpload(file, (url) => setNewProject(p => ({ ...p, mediaUrl: url })));
+                                                if (file) {
+                                                    const loadingId = toast.loading("جاري الرفع...");
+                                                    try {
+                                                        await handleFileUpload(file, (url) => {
+                                                            setNewProject(p => ({ ...p, mediaUrl: url }));
+                                                        });
+                                                        toast.success("تم الرفع بنجاح!", { id: loadingId });
+                                                    } catch (error) {
+                                                        toast.error("فشل الرفع", { id: loadingId });
+                                                    }
+                                                }
                                             }}
                                         />
-                                        {isUploading ? <Loader2 size={18} className="animate-spin text-brand-gold" /> : <Upload size={18} />}
+                                        {isUploading ? (
+                                            <div className="flex flex-col items-center">
+                                                <Loader2 size={16} className="animate-spin text-brand-gold" />
+                                                <span className="text-[8px] mt-1 font-bold">{uploadProgress}%</span>
+                                            </div>
+                                        ) : (
+                                            <Upload size={18} />
+                                        )}
                                     </label>
                                 </div>
                                 <p className="text-[8px] text-brand-navy/40 px-2 italic">يمكنك رفع الصور والفيديوهات مباشرة من هاتفك</p>

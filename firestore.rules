@@ -13,10 +13,6 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == "motaem23y@gmail.com";
-    }
-
-    function isAdmin() {
       return isSignedIn() && request.auth.token.email_verified == true && request.auth.token.email == "motaem23y@gmail.com";
     }
 
