@@ -229,8 +229,16 @@ export const AdminDashboard = () => {
   };
 
   const handleForceRepair = async () => {
-    if (confirm("سيقوم هذا بمحاولة إعادة تهيئة الصلاحيات وحذف بيانات وهمية إن وجدت. هل أنت متأكد؟")) {
-        toast.success("تم تحديث وضع المسؤول. حاول الحذف الآن.");
+    if (confirm("سيقوم هذا بمحاولة إعادة تحديث البيانات من السيرفر وحل مشاكل العرض. هل أنت متأكد؟")) {
+        setLoading(true);
+        // We just need to re-trigger the fetchSettings, the onSnapshot for projects is already active
+        const docRef = doc(db, "settings", "global");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            setSettings(docSnap.data() as SiteSettings);
+        }
+        setLoading(false);
+        toast.success("تم تحديث البيانات");
     }
   };
 
@@ -490,7 +498,7 @@ export const AdminDashboard = () => {
                                         {p.type === 'video' ? <Video size={20} /> : p.type === 'image' ? <ImageIcon size={20} /> : <Book size={20} />}
                                     </div>
                                     <div className="min-w-0">
-                                        <h3 className="font-bold text-sm truncate">{p.title}</h3>
+                                        <h3 className="font-bold text-sm truncate">{p.title || "بدون عنوان (Untitled)"}</h3>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className="text-[8px] text-brand-gold font-black uppercase tracking-widest">{p.type === 'video' ? 'فيديو' : p.type === 'image' ? 'صورة' : 'مشروع'}</span>
                                             <span className="text-[8px] text-brand-navy/30 font-bold">• {p.level === 'secondary' ? 'ثانوي' : p.level === 'preparatory' ? 'إعدادي' : 'ابتدائي'}</span>

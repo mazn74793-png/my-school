@@ -238,8 +238,10 @@ const App = () => {
 
   const filteredProjects = projects.filter(p => {
     const matchesLevel = filterLevel === "all" || p.level === filterLevel || p.level === "all";
-    const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         p.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const title = p.title || "";
+    const description = p.description || "";
+    const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesLevel && matchesSearch;
   });
 
@@ -522,8 +524,8 @@ const App = () => {
                               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 text-right">
-                              <span className="text-brand-gold font-mono text-[10px] uppercase tracking-widest mb-2">{project.type}</span>
-                              <h3 className="text-white text-xl font-display font-black italic">{project.title}</h3>
+                              <span className="text-brand-gold font-mono text-[10px] uppercase tracking-widest mb-2">{project.type || "unknown"}</span>
+                              <h3 className="text-white text-xl font-display font-black italic">{project.title || "بدون عنوان"}</h3>
                           </div>
                       </div>
                   </motion.div>
