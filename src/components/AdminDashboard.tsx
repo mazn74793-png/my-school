@@ -19,15 +19,31 @@ export const AdminDashboard = () => {
   
   const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
     return new Promise(async (resolve, reject) => {
-      console.log("Starting R2 Upload via Server:", file.name);
+      console.log("Starting Direct Pre-signed R2 Upload:", file.name);
       
       setIsUploading(true);
       setUploadProgress(0);
 
-      const formData = new FormData();
-      formData.append("file", file);
-
       try {
+        // 1. Get pre-signed URL from server
+        const signResponse = await fetch("/api/upload/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileType: file.type
+          })
+        });
+
+        const signData = await signResponse.json();
+
+        if (!signData.success) {
+          throw new Error(signData.message || "فشل الحصول على تصريح الرفع");
+        }
+
+        const { signedUrl, publicUrl } = signData;
+
+        // 2. Upload directly to R2
         const xhr = new XMLHttpRequest();
         
         xhr.upload.addEventListener("progress", (event) => {
@@ -38,41 +54,30 @@ export const AdminDashboard = () => {
         });
 
         xhr.onload = () => {
-          if (xhr.status === 200) {
-            const response = JSON.parse(xhr.responseText);
-            if (response.success && response.url) {
-              callback(response.url);
-              setIsUploading(false);
-              setUploadProgress(0);
-              resolve(response.url);
-            } else {
-              const msg = response.message || "فشل الرفع";
-              toast.error(msg, { duration: 6000 });
-              reject(msg);
-            }
+          if (xhr.status === 200 || xhr.status === 204) {
+            callback(publicUrl);
+            setIsUploading(false);
+            setUploadProgress(0);
+            resolve(publicUrl);
           } else {
-            let errorMsg = "حدث خطأ في السيرفر";
-            try {
-              const res = JSON.parse(xhr.responseText);
-              errorMsg = res.message || errorMsg;
-            } catch(e) {}
-            toast.error(errorMsg, { duration: 6000 });
-            reject(errorMsg);
+            toast.error("فشل الرفع المباشر. تأكد من إعدادات CORS في Cloudflare");
+            reject("Direct upload failed");
           }
           setIsUploading(false);
         };
 
         xhr.onerror = () => {
-          toast.error("فشل الاتصال بالسيرفر");
+          toast.error("خطأ في الاتصال أثناء الرفع المباشر. تأكد من CORS");
           reject("Network error");
           setIsUploading(false);
         };
 
-        xhr.open("POST", "/api/upload");
-        xhr.send(formData);
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.send(file);
 
       } catch (error: any) {
-        toast.error("حدث خطأ في الرفع");
+        toast.error(error.message || "حدث خطأ في الرفع المباشر");
         setIsUploading(false);
         reject(error);
       }
