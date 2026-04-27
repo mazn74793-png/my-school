@@ -6,17 +6,22 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import streamifier from "streamifier";
 
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+// Configure Cloudflare R2
+const r2Client = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+  },
 });
 
-// Configure Multer (Memory Storage for Cloudinary)
+// Configure Multer (Memory Storage)
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage,
@@ -28,52 +33,58 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
-
-  // Upload API using Cloudinary
+  
+  // Upload API using Cloudflare R2
   app.post("/api/upload", upload.single("file"), async (req: any, res) => {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "No file uploaded" });
+      return res.status(400).json({ success: false, message: "لم يتم اختيار ملف" });
     }
 
-    // Validation check for Cloudinary config
-    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY || !process.env.R2_BUCKET_NAME) {
       return res.status(500).json({ 
         success: false, 
-        message: "Cloudinary configuration is missing in server environment. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to Vercel/Environment Variables." 
+        message: "إعدادات Cloudflare R2 ناقصة. يرجى إضافة R2_ACCOUNT_ID و R2_ACCESS_KEY_ID و R2_SECRET_ACCESS_KEY و R2_BUCKET_NAME في Vercel." 
       });
     }
 
     try {
-      const streamUpload = (fileBuffer: Buffer) => {
-        return new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            {
-              folder: "pro_uploads",
-              resource_type: "auto",
-            },
-            (error, result) => {
-              if (result) {
-                resolve(result);
-              } else {
-                reject(error);
-              }
-            }
-          );
-          streamifier.createReadStream(fileBuffer).pipe(stream);
-        });
+      const timestamp = Date.now();
+      const safeOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.]/g, "_");
+      const fileName = `${timestamp}-${safeOriginalName}`;
+      
+      console.log(`Uploading ${fileName} to bucket ${process.env.R2_BUCKET_NAME}`);
+
+      const uploadParams = {
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: fileName,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
       };
 
-      const result: any = await streamUpload(req.file.buffer);
+      await r2Client.send(new PutObjectCommand(uploadParams));
+
+      // Use public R2 domain or custom worker URL if available
+      let publicUrl = "";
+      if (process.env.R2_PUBLIC_URL) {
+        // Ensure R2_PUBLIC_URL doesn't end with a slash, then append the file name
+        const baseUrl = process.env.R2_PUBLIC_URL.replace(/\/$/, "");
+        publicUrl = `${baseUrl}/${fileName}`;
+      } else {
+        // Fallback for standard R2 endpoint (might be rate-limited or require specific setup)
+        // Usually the user provides the pub-xxx.r2.dev URL which is the R2_PUBLIC_URL
+        publicUrl = `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${fileName}`; 
+      }
+
       res.json({ 
         success: true, 
-        url: result.secure_url,
-        public_id: result.public_id
+        url: publicUrl,
+        key: fileName
       });
     } catch (error: any) {
-      console.error("Cloudinary Upload Error:", error);
+      console.error("Cloudflare R2 Upload Error Full:", error);
       res.status(500).json({ 
         success: false, 
-        message: error.message || "Cloudinary upload failed" 
+        message: `خطأ في الرفع: ${error.message || "حدث خطأ غير متوقع"}. تأكد من صلاحيات التوكن واسم الباكيت.` 
       });
     }
   });
