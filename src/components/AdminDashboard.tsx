@@ -19,83 +19,67 @@ export const AdminDashboard = () => {
   
   const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
     return new Promise(async (resolve, reject) => {
-      console.log("Starting Direct Pre-signed R2 Upload:", file.name);
+      console.log("Starting Cloudinary Upload via Server:", file.name);
       
       setIsUploading(true);
       setUploadProgress(0);
+      
+      const formData = new FormData();
+      formData.append("file", file);
 
       try {
-        // 1. Get pre-signed URL from server
-        let signData;
-        try {
-          const signResponse = await fetch("/api/upload/presign", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              fileName: file.name,
-              fileType: file.type
-            })
-          });
-
-          const contentType = signResponse.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-            const text = await signResponse.text();
-            console.error("Server returned non-JSON response:", text);
-            // If it looks like HTML, it might be a 404 or the main index.html
-            if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
-              throw new Error(`خطأ في السيرفر (كود: ${signResponse.status}). يبدو أن المسار /api غير متاح أو يرجع الصفحة الرئيسية.`);
-            }
-            throw new Error(`استجابة غير متوقعة: ${text.substring(0, 100)}...`);
-          }
-
-          signData = await signResponse.json();
-        } catch (e: any) {
-          console.error("Sign request failed:", e);
-          throw new Error(e.message || "فشل الاتصال بالسيرفر لطلب تصريح الرفع");
-        }
-
-        if (!signData.success) {
-          throw new Error(signData.message || "فشل الحصول على تصريح الرفع");
-        }
-
-        const { signedUrl, publicUrl } = signData;
-
-        // 2. Upload directly to R2
         const xhr = new XMLHttpRequest();
         
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(progress);
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percent);
           }
         });
 
         xhr.onload = () => {
-          if (xhr.status === 200 || xhr.status === 204) {
-            callback(publicUrl);
-            setIsUploading(false);
-            setUploadProgress(0);
-            resolve(publicUrl);
+          if (xhr.status === 200) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.success && response.url) {
+                callback(response.url);
+                resolve(response.url);
+              } else {
+                const msg = response.message || "فشل الرفع";
+                toast.error(msg);
+                reject(msg);
+              }
+            } catch (e) {
+              toast.error("استجابة غير صالحة من السيرفر");
+              reject("Invalid JSON");
+            }
           } else {
-            toast.error("فشل الرفع المباشر. تأكد من إعدادات CORS في Cloudflare");
-            reject("Direct upload failed");
+            let errorMsg = "حدث خطأ في السيرفر";
+            try {
+              const res = JSON.parse(xhr.responseText);
+              errorMsg = res.message || errorMsg;
+            } catch(e) {}
+            toast.error(errorMsg);
+            reject(errorMsg);
           }
           setIsUploading(false);
+          setUploadProgress(0);
         };
 
         xhr.onerror = () => {
-          toast.error("خطأ في الاتصال أثناء الرفع المباشر. تأكد من CORS");
+          toast.error("فشل الاتصال بالسيرفر");
           reject("Network error");
           setIsUploading(false);
+          setUploadProgress(0);
         };
 
-        xhr.open("PUT", signedUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
-        xhr.send(file);
+        xhr.open("POST", "/api/upload");
+        xhr.send(formData);
 
       } catch (error: any) {
-        toast.error(error.message || "حدث خطأ في الرفع المباشر");
+        toast.error("حدث خطأ غير متوقع");
         setIsUploading(false);
+        setUploadProgress(0);
         reject(error);
       }
     });
@@ -253,7 +237,7 @@ export const AdminDashboard = () => {
                 </button>
                 <div className="hidden lg:flex items-center px-4 border-l border-black/5">
                   <div className={`w-2 h-2 rounded-full mr-2 ${healthStatus === 'متصل' ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-[10px] font-black text-brand-navy/40">{healthStatus}</span>
+                  <span className="text-[10px] font-black text-brand-navy/40">Cloudinary: {healthStatus}</span>
                 </div>
           </div>
           <button 
