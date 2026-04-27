@@ -59,7 +59,7 @@ async function startServer() {
       const safeOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.]/g, "_");
       const fileName = `${timestamp}-${safeOriginalName}`;
       
-      console.log(`Uploading ${fileName} to bucket ${R2_BUCKET_NAME}...`);
+      console.log(`[R2] Attempting upload: ${fileName} to bucket: ${R2_BUCKET_NAME}`);
 
       const uploadParams = {
         Bucket: R2_BUCKET_NAME,
@@ -69,18 +69,19 @@ async function startServer() {
       };
 
       await r2Client.send(new PutObjectCommand(uploadParams));
-      console.log(`Upload successful: ${fileName}`);
+      console.log(`[R2] Upload successful: ${fileName}`);
 
-      // Use public R2 domain or custom worker URL if available
+      // Construction of Public URL
       let publicUrl = "";
       if (process.env.R2_PUBLIC_URL) {
-        // Ensure R2_PUBLIC_URL doesn't end with a slash, then append the file name
+        // Use the user-provided Public Development URL or Custom Domain
         const baseUrl = process.env.R2_PUBLIC_URL.replace(/\/$/, "");
         publicUrl = `${baseUrl}/${fileName}`;
       } else {
-        // Fallback for standard R2 endpoint (might be rate-limited or require specific setup)
-        // Usually the user provides the pub-xxx.r2.dev URL which is the R2_PUBLIC_URL
-        publicUrl = `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${fileName}`; 
+        // Fallback to standard pub-hash.r2.dev format if account ID is provided
+        // Note: The "pub-xxx" hash is often different from the Account ID.
+        // It is strongly recommended to set R2_PUBLIC_URL in Vercel.
+        publicUrl = `https://pub-${R2_ACCOUNT_ID}.r2.dev/${fileName}`;
       }
 
       res.json({ 
@@ -89,12 +90,18 @@ async function startServer() {
         key: fileName
       });
     } catch (error: any) {
-      console.error("Cloudflare R2 Upload Error Full:", error);
-      // Return a more descriptive error if possible
-      const errorMessage = error.message || "حدث خطأ غير متوقع أثناء الرفع";
+      console.error("[R2] Critical Upload Error:", error);
+      
+      let friendlyMessage = "فشل الرفع على السيرفر (R2 Error)";
+      if (error.name === "InvalidAccessKeyId") friendlyMessage = "الـ Access Key ID غير صحيح";
+      if (error.name === "SignatureDoesNotMatch") friendlyMessage = "الـ Secret Access Key غير صحيح";
+      if (error.name === "NoSuchBucket") friendlyMessage = "اسم الـ Bucket غير موجود في حسابك";
+      if (error.code === "ENOTFOUND") friendlyMessage = "لا يمكن الاتصال بـ Cloudflare (تأكد من Account ID)";
+
       res.status(500).json({ 
         success: false, 
-        message: `خطأ في الرفع: ${errorMessage}. تأكد من صحة الـ API Tokens واسم الـ Bucket.` 
+        message: `${friendlyMessage}: ${error.message || ""}`,
+        debug: process.env.NODE_ENV !== "production" ? error.stack : undefined
       });
     }
   });
