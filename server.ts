@@ -42,39 +42,54 @@ async function startServer() {
   
   app.get("/api/health", (req, res) => {
     console.log("[Health] Checking system status...");
+    const config = {
+      cloud: !!process.env.CLOUDINARY_CLOUD_NAME,
+      key: !!process.env.CLOUDINARY_API_KEY,
+      secret: !!process.env.CLOUDINARY_API_SECRET
+    };
+    console.log("[Health] Config status:", config);
     res.json({ 
       status: "ok", 
-      cloudinaryConfigured: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
+      cloudinaryConfigured: config.cloud && config.key && config.secret,
       env: process.env.NODE_ENV
     });
   });
 
   // Cloudinary Upload API
   app.post("/api/upload", upload.single("file"), async (req: any, res) => {
+    console.log("[Upload] Route hit");
     if (!req.file) {
+      console.error("[Upload] No file provided");
       return res.status(400).json({ success: false, message: "لم يتم اختيار ملف" });
     }
 
-    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    console.log(`[Upload] Received file: ${req.file.originalname} (${req.file.size} bytes)`);
+
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error("[Upload] Missing Cloudinary environment variables");
       return res.status(500).json({ 
         success: false, 
-        message: "إعدادات Cloudinary ناقصة. يرجى إضافة CLOUDINARY_CLOUD_NAME و API_KEY و API_SECRET." 
+        message: "إعدادات Cloudinary ناقصة في السيرفر. تأكد من إضافة المتغيرات في الإعدادات." 
       });
     }
 
     try {
-      console.log(`[Cloudinary] Uploading ${req.file.originalname}...`);
+      console.log(`[Cloudinary] Starting upload...`);
       
       // Upload using a buffer
       const uploadResult = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
-            resource_type: "auto", // Automatically detect image or video
+            resource_type: "auto",
             folder: "school_portfolio",
           },
           (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
+            if (error) {
+              console.error("[Cloudinary] Upload Stream Error:", error);
+              reject(error);
+            } else {
+              resolve(result);
+            }
           }
         );
         uploadStream.end(req.file.buffer);
@@ -89,10 +104,10 @@ async function startServer() {
         public_id: result.public_id
       });
     } catch (error: any) {
-      console.error("[Cloudinary] Critical Upload Error:", error);
+      console.error("[Cloudinary] Critical Upload Catch:", error);
       res.status(500).json({ 
         success: false, 
-        message: `خطأ في الرفع: ${error.message || "فشل الرفع لمخدم Cloudinary"}` 
+        message: `خطأ أثناء الرفع: ${error.message || "فشل غير معروف"}` 
       });
     }
   });

@@ -452,24 +452,24 @@ export const AdminDashboard = () => {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 blur-3xl rounded-full" />
                     <div className="flex items-center gap-3 border-b border-white/10 pb-4 mb-6">
                         <ShieldCheck className="text-brand-gold" size={24} />
-                        <h2 className="text-xl font-display font-black italic">نظام الرفع الاحترافي المزدوج</h2>
+                        <h2 className="text-xl font-display font-black italic">نظام الرفع الاحترافي الجديد</h2>
                     </div>
                     <div className="space-y-6 relative z-10 text-right">
                         <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">تجاوز قيود Firebase <CheckCircle2 size={16} /></p>
+                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">استخدام Cloudinary للوسائط <CheckCircle2 size={16} /></p>
                             <p className="text-xs text-white/70 leading-relaxed italic">
-                                لقد قمت بتفعيل نظام رفع <b>Cloudflare R2</b>. هذا النظام يغنيك عن دفع مبالغ لـ Firebase مقابل المساحة. 
-                                <br />الرفع الآن يتم من خلال السيرفر مباشرة لضمان أمان الروابط واستمراريتها.
+                                لقد قمت بتفعيل نظام رفع <b>Cloudinary</b>. هذا النظام يتيح لك رفع الصور والفيديوهات بمساحات كبيرة دون استهلاك موارد Firebase.
+                                <br />جميع الملفات يتم معالجتها ورفعها من خلال السيرفر لضمان أقصى درجات الأمان والسرعة.
                             </p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                                 <p className="text-xs font-bold text-brand-gold mb-2">الدعم الفني</p>
-                                <p className="text-[10px] text-white/50 leading-relaxed">إذا واجهت أي مشكلة في الرفع، تأكد أنك قمت بإضافة مفاتيح R2 في إعدادات Vercel. النظام مصمم ليدعم حتى 50MB للملف الواحد.</p>
+                                <p className="text-[10px] text-white/50 leading-relaxed">إذا واجهت أي مشكلة في الرفع، تأكد أنك قمت بإضافة المتغيرات (Cloud Name, API Key, API Secret) في إعدادات البيئة الخاصة بك.</p>
                             </div>
                             <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                                 <p className="text-xs font-bold text-brand-gold mb-2">تأمين البيانات</p>
-                                <p className="text-[10px] text-white/50 leading-relaxed">جميع ملفاتك محفوظة في Cloudflare ومشفرة. الروابط التي تحصل عليها هي روابط عامة (Public CDN) لتكون سريعة جداً عند الفتح.</p>
+                                <p className="text-[10px] text-white/50 leading-relaxed">جميع ملفاتك محفوظة في سحابة Cloudinary ومشفرة. الروابط التي تحصل عليها هي روابط آمنة (HTTPS) وتعمل مدى الحياة.</p>
                             </div>
                         </div>
                     </div>
