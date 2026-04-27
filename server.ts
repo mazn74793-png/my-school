@@ -11,16 +11,6 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configure Cloudflare R2
-const r2Client = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
-  },
-});
-
 // Configure Multer (Memory Storage)
 const storage = multer.memoryStorage();
 const upload = multer({ 
@@ -40,28 +30,46 @@ async function startServer() {
       return res.status(400).json({ success: false, message: "لم يتم اختيار ملف" });
     }
 
-    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY || !process.env.R2_BUCKET_NAME) {
+    const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME } = process.env;
+
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
+      console.error("Missing R2 Environment Variables:", {
+        R2_ACCOUNT_ID: !!R2_ACCOUNT_ID,
+        R2_ACCESS_KEY_ID: !!R2_ACCESS_KEY_ID,
+        R2_SECRET_ACCESS_KEY: !!R2_SECRET_ACCESS_KEY,
+        R2_BUCKET_NAME: !!R2_BUCKET_NAME
+      });
       return res.status(500).json({ 
         success: false, 
-        message: "إعدادات Cloudflare R2 ناقصة. يرجى إضافة R2_ACCOUNT_ID و R2_ACCESS_KEY_ID و R2_SECRET_ACCESS_KEY و R2_BUCKET_NAME في Vercel." 
+        message: "إعدادات Cloudflare R2 ناقصة. يرجى إضافة ACCOUNT_ID و ACCESS_KEY و SECRET_KEY و BUCKET_NAME في الإعدادات." 
       });
     }
 
     try {
+      const r2Client = new S3Client({
+        region: "auto",
+        endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId: R2_ACCESS_KEY_ID,
+          secretAccessKey: R2_SECRET_ACCESS_KEY,
+        },
+      });
+
       const timestamp = Date.now();
       const safeOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.]/g, "_");
       const fileName = `${timestamp}-${safeOriginalName}`;
       
-      console.log(`Uploading ${fileName} to bucket ${process.env.R2_BUCKET_NAME}`);
+      console.log(`Uploading ${fileName} to bucket ${R2_BUCKET_NAME}...`);
 
       const uploadParams = {
-        Bucket: process.env.R2_BUCKET_NAME,
+        Bucket: R2_BUCKET_NAME,
         Key: fileName,
         Body: req.file.buffer,
         ContentType: req.file.mimetype,
       };
 
       await r2Client.send(new PutObjectCommand(uploadParams));
+      console.log(`Upload successful: ${fileName}`);
 
       // Use public R2 domain or custom worker URL if available
       let publicUrl = "";
@@ -82,9 +90,11 @@ async function startServer() {
       });
     } catch (error: any) {
       console.error("Cloudflare R2 Upload Error Full:", error);
+      // Return a more descriptive error if possible
+      const errorMessage = error.message || "حدث خطأ غير متوقع أثناء الرفع";
       res.status(500).json({ 
         success: false, 
-        message: `خطأ في الرفع: ${error.message || "حدث خطأ غير متوقع"}. تأكد من صلاحيات التوكن واسم الباكيت.` 
+        message: `خطأ في الرفع: ${errorMessage}. تأكد من صحة الـ API Tokens واسم الـ Bucket.` 
       });
     }
   });
