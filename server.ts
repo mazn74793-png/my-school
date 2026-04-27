@@ -1,4 +1,5 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -6,6 +7,16 @@ import { fileURLToPath } from "url";
 import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+console.log("[Server] Starting with PID:", process.pid);
+
+process.on("uncaughtException", (err) => {
+  console.error("[Fatal Error] Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[Fatal Error] Unhandled Rejection at:", promise, "reason:", reason);
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +34,16 @@ async function startServer() {
 
   app.use(express.json());
   
+  // Request logging middleware
+  app.use((req, res, next) => {
+    if (req.url.startsWith("/api")) {
+      console.log(`[API Request] ${req.method} ${req.url}`);
+    }
+    next();
+  });
+  
   app.get("/api/health", (req, res) => {
+    console.log("[Health] Checking system status...");
     res.json({ 
       status: "ok", 
       r2Configured: !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID),
@@ -33,9 +53,11 @@ async function startServer() {
 
   // Pre-signed URL API for Direct Browser Uploads (Bypasses Vercel Payload Limits)
   app.post("/api/upload/presign", async (req, res) => {
+    console.log("[R2-Presign] Received Body:", req.body);
     const { fileName, fileType } = req.body;
     
     if (!fileName) {
+      console.warn("[R2-Presign] Missing fileName");
       return res.status(400).json({ success: false, message: "اسم الملف مطلوب" });
     }
 
@@ -179,13 +201,22 @@ async function startServer() {
     res.json({ success: true, message: "Message received successfully!" });
   });
 
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    console.log("[Vite] Initializing development server...");
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        hmr: { server } // Optional: link HMR to the express server
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    console.log("[Vite] Ready.");
   } else {
     // Production serving
     const distPath = path.join(__dirname, "dist");
@@ -194,10 +225,6 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
 }
 
 startServer();

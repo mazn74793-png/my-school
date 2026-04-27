@@ -41,7 +41,11 @@ export const AdminDashboard = () => {
           if (!contentType || !contentType.includes("application/json")) {
             const text = await signResponse.text();
             console.error("Server returned non-JSON response:", text);
-            throw new Error("السيرفر لم يستجب بشكل صحيح. تأكد من تشغيل الباكيند.");
+            // If it looks like HTML, it might be a 404 or the main index.html
+            if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
+              throw new Error(`خطأ في السيرفر (كود: ${signResponse.status}). يبدو أن المسار /api غير متاح أو يرجع الصفحة الرئيسية.`);
+            }
+            throw new Error(`استجابة غير متوقعة: ${text.substring(0, 100)}...`);
           }
 
           signData = await signResponse.json();
@@ -107,6 +111,7 @@ export const AdminDashboard = () => {
   });
 
   const [isAdminConfirmed, setIsAdminConfirmed] = useState<boolean | null>(null);
+  const [healthStatus, setHealthStatus] = useState<string>("Checking...");
 
   const [settings, setSettings] = useState<SiteSettings>({
     schoolName: "مدرسة محمد أنور السادات",
@@ -156,6 +161,12 @@ export const AdminDashboard = () => {
     // Fetch Settings
     const fetchSettings = async () => {
         try {
+            // Check API Health
+            fetch("/api/health")
+              .then(res => res.json())
+              .then(data => setHealthStatus(data.status === "ok" ? "متصل" : "غير متصل"))
+              .catch(() => setHealthStatus("غير متصل"));
+
             const docRef = doc(db, "settings", "global");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
@@ -221,25 +232,29 @@ export const AdminDashboard = () => {
       
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <div className="flex bg-white p-1 rounded-2xl border border-black/5 shadow-sm w-full md:w-auto">
+          <div className="flex bg-white p-1 rounded-2xl border border-black/5 shadow-sm w-full md:w-auto overflow-x-auto">
                 <button 
                     onClick={() => setActiveTab("works")}
-                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm ${activeTab === 'works' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
+                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === 'works' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
                 >
                     الأعمال
                 </button>
                 <button 
                     onClick={() => setActiveTab("settings")}
-                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm ${activeTab === 'settings' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
+                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === 'settings' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
                 >
                     الإعدادات
                 </button>
                 <button 
                     onClick={() => setActiveTab("help")}
-                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm ${activeTab === 'help' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
+                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === 'help' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
                 >
                     الدعم الفني
                 </button>
+                <div className="hidden lg:flex items-center px-4 border-l border-black/5">
+                  <div className={`w-2 h-2 rounded-full mr-2 ${healthStatus === 'متصل' ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="text-[10px] font-black text-brand-navy/40">{healthStatus}</span>
+                </div>
           </div>
           <button 
             onClick={() => auth.signOut()}
