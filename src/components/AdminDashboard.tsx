@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { db, auth } from "../lib/firebase";
+import { db, auth, storage } from "../lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
 import { Project, ProjectType, SiteSettings, EducationLevel } from "../types";
 import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck } from "lucide-react";
@@ -18,66 +19,40 @@ export const AdminDashboard = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   
   const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
-    return new Promise(async (resolve, reject) => {
-      console.log("Starting Cloudinary Upload via Server:", file.name);
+    return new Promise((resolve, reject) => {
+      console.log("Starting Firebase Storage Upload:", file.name);
       
       setIsUploading(true);
       setUploadProgress(0);
-      
-      const formData = new FormData();
-      formData.append("file", file);
 
       try {
-        const xhr = new XMLHttpRequest();
-        
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const percent = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percent);
+        const storageRef = ref(storage, `school_portfolio/${Date.now()}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            setUploadProgress(progress);
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            toast.error("فشل الرفع. تأكد من تفعيل Storage في Firebase Console.");
+            setIsUploading(false);
+            setUploadProgress(0);
+            reject(error);
+          },
+          async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            console.log("File available at", downloadURL);
+            callback(downloadURL);
+            setIsUploading(false);
+            setUploadProgress(0);
+            resolve(downloadURL);
           }
-        });
-
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              if (response.success && response.url) {
-                callback(response.url);
-                resolve(response.url);
-              } else {
-                const msg = response.message || "فشل الرفع";
-                toast.error(msg);
-                reject(msg);
-              }
-            } catch (e) {
-              toast.error("استجابة غير صالحة من السيرفر");
-              reject("Invalid JSON");
-            }
-          } else {
-            let errorMsg = "حدث خطأ في السيرفر";
-            try {
-              const res = JSON.parse(xhr.responseText);
-              errorMsg = res.message || errorMsg;
-            } catch(e) {}
-            toast.error(errorMsg);
-            reject(errorMsg);
-          }
-          setIsUploading(false);
-          setUploadProgress(0);
-        };
-
-        xhr.onerror = () => {
-          toast.error("فشل الاتصال بالسيرفر");
-          reject("Network error");
-          setIsUploading(false);
-          setUploadProgress(0);
-        };
-
-        xhr.open("POST", "/api/upload");
-        xhr.send(formData);
-
+        );
       } catch (error: any) {
-        toast.error("حدث خطأ غير متوقع");
+        toast.error("حدث خطأ في النظام");
         setIsUploading(false);
         setUploadProgress(0);
         reject(error);
@@ -237,7 +212,7 @@ export const AdminDashboard = () => {
                 </button>
                 <div className="hidden lg:flex items-center px-4 border-l border-black/5">
                   <div className={`w-2 h-2 rounded-full mr-2 ${healthStatus === 'متصل' ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-[10px] font-black text-brand-navy/40">Cloudinary: {healthStatus}</span>
+                  <span className="text-[10px] font-black text-brand-navy/40">Firebase Storage: Active</span>
                 </div>
           </div>
           <button 
@@ -452,24 +427,24 @@ export const AdminDashboard = () => {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 blur-3xl rounded-full" />
                     <div className="flex items-center gap-3 border-b border-white/10 pb-4 mb-6">
                         <ShieldCheck className="text-brand-gold" size={24} />
-                        <h2 className="text-xl font-display font-black italic">نظام الرفع الاحترافي الجديد</h2>
+                        <h2 className="text-xl font-display font-black italic">نظام الرفع الأساسي (Firebase)</h2>
                     </div>
                     <div className="space-y-6 relative z-10 text-right">
                         <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">استخدام Cloudinary للوسائط <CheckCircle2 size={16} /></p>
+                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">استخدام Firebase Storage <CheckCircle2 size={16} /></p>
                             <p className="text-xs text-white/70 leading-relaxed italic">
-                                لقد قمت بتفعيل نظام رفع <b>Cloudinary</b>. هذا النظام يتيح لك رفع الصور والفيديوهات بمساحات كبيرة دون استهلاك موارد Firebase.
-                                <br />جميع الملفات يتم معالجتها ورفعها من خلال السيرفر لضمان أقصى درجات الأمان والسرعة.
+                                تم تفعيل نظام الرفع المباشر إلى <b>Firebase Storage</b>. هذا النظام يضمن استقراراً كاملاً وتكاملاً مع قاعدة البيانات الخاصة بك.
+                                <br />تأكد من تفعيل خدمة <b>Storage</b> من لوحة تحكم Firebase وتعيين القواعد (Rules) لتسمح بالرفع.
                             </p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-                                <p className="text-xs font-bold text-brand-gold mb-2">الدعم الفني</p>
-                                <p className="text-[10px] text-white/50 leading-relaxed">إذا واجهت أي مشكلة في الرفع، تأكد أنك قمت بإضافة المتغيرات (Cloud Name, API Key, API Secret) في إعدادات البيئة الخاصة بك.</p>
+                                <p className="text-xs font-bold text-brand-gold mb-2">حل المشكلات</p>
+                                <p className="text-[10px] text-white/50 leading-relaxed">إذا فشل الرفع، غالباً ما يكون السبب هو عدم تفعيل "Storage" في حسابك أو وجود قيود في القواعد الأمنية (Security Rules).</p>
                             </div>
                             <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-                                <p className="text-xs font-bold text-brand-gold mb-2">تأمين البيانات</p>
-                                <p className="text-[10px] text-white/50 leading-relaxed">جميع ملفاتك محفوظة في سحابة Cloudinary ومشفرة. الروابط التي تحصل عليها هي روابط آمنة (HTTPS) وتعمل مدى الحياة.</p>
+                                <p className="text-xs font-bold text-brand-gold mb-2">الأمان والسرعة</p>
+                                <p className="text-[10px] text-white/50 leading-relaxed">ملفاتك الآن مرتبطة مباشرة بمشروعك، مما يسرع من عملية العرض ويضمن خصوصية البيانات بالكامل.</p>
                             </div>
                         </div>
                     </div>
