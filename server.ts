@@ -1,11 +1,9 @@
+import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
-import streamifier from "streamifier";
-
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -25,6 +23,14 @@ async function startServer() {
 
   app.use(express.json());
   
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      r2Configured: !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID),
+      env: process.env.NODE_ENV
+    });
+  });
+
   // Pre-signed URL API for Direct Browser Uploads (Bypasses Vercel Payload Limits)
   app.post("/api/upload/presign", async (req, res) => {
     const { fileName, fileType } = req.body;

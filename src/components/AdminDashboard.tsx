@@ -26,16 +26,29 @@ export const AdminDashboard = () => {
 
       try {
         // 1. Get pre-signed URL from server
-        const signResponse = await fetch("/api/upload/presign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileName: file.name,
-            fileType: file.type
-          })
-        });
+        let signData;
+        try {
+          const signResponse = await fetch("/api/upload/presign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fileName: file.name,
+              fileType: file.type
+            })
+          });
 
-        const signData = await signResponse.json();
+          const contentType = signResponse.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            const text = await signResponse.text();
+            console.error("Server returned non-JSON response:", text);
+            throw new Error("السيرفر لم يستجب بشكل صحيح. تأكد من تشغيل الباكيند.");
+          }
+
+          signData = await signResponse.json();
+        } catch (e: any) {
+          console.error("Sign request failed:", e);
+          throw new Error(e.message || "فشل الاتصال بالسيرفر لطلب تصريح الرفع");
+        }
 
         if (!signData.success) {
           throw new Error(signData.message || "فشل الحصول على تصريح الرفع");
