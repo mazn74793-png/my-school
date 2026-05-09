@@ -3,6 +3,45 @@ import { motion, AnimatePresence } from "motion/react";
 import { db, auth, storage } from "../lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+  }
+}
+
+const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+};
 import { uploadToCloudinary } from "../lib/cloudinary";
 import { Project, ProjectType, SiteSettings, EducationLevel } from "../types";
 import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud } from "lucide-react";
@@ -120,12 +159,18 @@ export const AdminDashboard = () => {
             if (userEmail === "motaem23y@gmail.com" || userEmail === "motaem23@gmail.com" || userEmail === "mazn74793@gmail.com") {
                 await setDoc(doc(db, "admins", auth.currentUser.uid), {
                     email: auth.currentUser.email,
-                    registeredAt: serverTimestamp()
+                    registeredAt: serverTimestamp(),
+                    lastActive: serverTimestamp()
                 }, { merge: true });
                 setIsAdminConfirmed(true);
             } else {
                 const adminSnap = await getDoc(doc(db, "admins", auth.currentUser.uid));
-                if (adminSnap.exists()) setIsAdminConfirmed(true);
+                if (adminSnap.exists()) {
+                    setIsAdminConfirmed(true);
+                    await setDoc(doc(db, "admins", auth.currentUser.uid), {
+                        lastActive: serverTimestamp()
+                    }, { merge: true });
+                }
             }
         } catch (e) {
             console.log("Admin check fallback:", e);
@@ -172,8 +217,9 @@ export const AdminDashboard = () => {
     if (!auth.currentUser) return;
 
     const loadingId = toast.loading("جاري النشر...");
+    const path = "projects";
     try {
-      await addDoc(collection(db, "projects"), {
+      await addDoc(collection(db, path), {
         ...newProject,
         authorId: auth.currentUser.uid,
         createdAt: serverTimestamp()
@@ -182,29 +228,31 @@ export const AdminDashboard = () => {
       setIsAdding(false);
       toast.success("تم الإضافة بنجاح!", { id: loadingId });
     } catch (error: any) {
-      toast.error(`فشل في الإضافة: ${error.message}`, { id: loadingId });
+      handleFirestoreError(error, OperationType.CREATE, path);
     }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
       e.preventDefault();
       const loadingId = toast.loading("جاري الحفظ...");
+      const path = "settings/global";
       try {
           await setDoc(doc(db, "settings", "global"), settings);
           toast.success("تم حفظ الإعدادات!", { id: loadingId });
       } catch (error: any) {
-          toast.error(`فشل في حفظ الإعدادات: ${error.message}`, { id: loadingId });
+          handleFirestoreError(error, OperationType.UPDATE, path);
       }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm("هل أنت متأكد من الحذف؟")) {
       const loadingId = toast.loading("جاري الحذف...");
+      const path = `projects/${id}`;
       try {
         await deleteDoc(doc(db, "projects", id));
         toast.success("تم الحذف بنجاح", { id: loadingId });
       } catch (error: any) {
-        toast.error(`فشل في الحذف: ${error.message}`, { id: loadingId });
+        handleFirestoreError(error, OperationType.DELETE, path);
       }
     }
   };
@@ -247,30 +295,38 @@ export const AdminDashboard = () => {
 
         {activeTab === "works" ? (
             <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-                    <button onClick={() => { setNewProject({ ...newProject, type: 'image' }); setIsAdding(true); }} className="bg-white p-4 rounded-3xl border border-black/5 shadow-sm hover:border-brand-gold transition-all text-center group">
-                        <div className="w-10 h-10 bg-brand-navy/5 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-brand-gold group-hover:text-white transition-colors">
-                            <ImageIcon size={20} />
-                        </div>
-                        <p className="font-bold text-xs">إضافة صورة</p>
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+                >
+                    <button onClick={() => { setNewProject({ ...newProject, type: 'image' }); setIsAdding(true); }} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden">
+                        <motion.div whileHover={{ scale: 1.1 }} className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
+                            <ImageIcon size={24} />
+                        </motion.div>
+                        <p className="font-black text-sm uppercase italic tracking-tighter">New Image</p>
+                        <p className="text-[10px] text-brand-navy/40 font-bold">إضافة صورة</p>
                     </button>
-                    <button onClick={() => { setNewProject({ ...newProject, type: 'video' }); setIsAdding(true); }} className="bg-white p-4 rounded-3xl border border-black/5 shadow-sm hover:border-brand-gold transition-all text-center group">
-                        <div className="w-10 h-10 bg-brand-navy/5 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-brand-gold group-hover:text-white transition-colors">
-                            <Video size={20} />
-                        </div>
-                        <p className="font-bold text-xs">إضافة فيديو</p>
+                    <button onClick={() => { setNewProject({ ...newProject, type: 'video' }); setIsAdding(true); }} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden">
+                        <motion.div whileHover={{ scale: 1.1 }} className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
+                            <Video size={24} />
+                        </motion.div>
+                        <p className="font-black text-sm uppercase italic tracking-tighter">New Video</p>
+                        <p className="text-[10px] text-brand-navy/40 font-bold">إضافة فيديو</p>
                     </button>
-                    <button onClick={() => { setNewProject({ ...newProject, type: 'project' }); setIsAdding(true); }} className="bg-white p-4 rounded-3xl border border-black/5 shadow-sm hover:border-brand-gold transition-all text-center group">
-                        <div className="w-10 h-10 bg-brand-navy/5 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-brand-gold group-hover:text-white transition-colors">
-                            <Book size={20} />
-                        </div>
-                        <p className="font-bold text-xs">إضافة مشروع</p>
+                    <button onClick={() => { setNewProject({ ...newProject, type: 'project' }); setIsAdding(true); }} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden">
+                        <motion.div whileHover={{ scale: 1.1 }} className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
+                            <Book size={24} />
+                        </motion.div>
+                        <p className="font-black text-sm uppercase italic tracking-tighter">New Entry</p>
+                        <p className="text-[10px] text-brand-navy/40 font-bold">إضافة مشروع</p>
                     </button>
-                    <div className="bg-brand-gold/10 p-4 rounded-3xl border border-brand-gold/20 shadow-sm text-center">
-                        <p className="text-brand-gold font-black text-2xl italic">{projects.length}</p>
-                        <p className="font-bold text-[10px] text-brand-gold uppercase tracking-wider">إجمالي الأعمال</p>
+                    <div className="bg-brand-navy p-6 rounded-[2.5rem] border border-white/10 shadow-2xl text-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand-gold/10 blur-2xl rounded-full" />
+                        <p className="text-brand-gold font-black text-4xl italic mb-1 relative z-10">{projects.length}</p>
+                        <p className="font-black text-[10px] text-white uppercase tracking-[0.2em] relative z-10">Total Assets</p>
                     </div>
-                </div>
+                </motion.div>
 
                 {isAdding && (
                 <form onSubmit={handleAdd} className="card-luxury p-6 md:p-10 mb-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -450,134 +506,194 @@ export const AdminDashboard = () => {
                 </div>
             </>
         ) : activeTab === "settings" ? (
-            <form onSubmit={handleSaveSettings} className="card-luxury p-8 space-y-6 animate-in fade-in duration-500">
-                <div className="flex items-center gap-4 border-b border-black/5 pb-4">
-                    <Globe className="text-brand-gold" size={20} />
-                    <h2 className="text-xl font-display font-black italic">إعدادات الموقع</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المدرسة</label>
-                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.schoolName} onChange={e => setSettings({...settings, schoolName: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط الشعار</label>
-                        <div className="flex gap-2">
-                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.logoUrl} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
-                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={18} /></label>
+            <motion.form 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                onSubmit={handleSaveSettings} 
+                className="card-luxury p-8 md:p-12 space-y-10 animate-in fade-in duration-500"
+            >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/5 pb-8">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-brand-gold text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-gold/20">
+                            <Globe size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-display font-black italic">إعدادات الموقع</h2>
+                            <p className="text-xs text-brand-navy/40 font-bold">General School Configuration</p>
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان الهيرو (كبير)</label>
-                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.heroTitle} onChange={e => setSettings({...settings, heroTitle: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان الهيرو (ذهبي)</label>
-                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.heroSubtitle} onChange={e => setSettings({...settings, heroSubtitle: e.target.value})} />
-                    </div>
+                    <button type="submit" className="px-8 py-3 bg-brand-navy text-white font-black rounded-2xl shadow-xl hover:bg-brand-gold transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <Save size={18} /> حفظ التغييرات
+                    </button>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">وصف الهيرو</label>
-                    <textarea className="input-field p-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-20" value={settings.heroDescription} onChange={e => setSettings({...settings, heroDescription: e.target.value})} />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-black/5 pt-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان "عن المدرسة"</label>
-                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.aboutTitle} onChange={e => setSettings({...settings, aboutTitle: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط صورة "عن المدرسة"</label>
-                        <div className="flex gap-2">
-                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs text-right" value={settings.aboutImageUrl} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
-                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, aboutImageUrl: url })))} /><Upload size={18} /></label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="space-y-6">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-brand-gold border-r-2 border-brand-gold pr-3">Identity & Branding</h3>
+                        
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المؤسسة</label>
+                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.schoolName} onChange={e => setSettings({...settings, schoolName: e.target.value})} />
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط الشعار الرسمي</label>
+                            <div className="flex gap-3">
+                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.logoUrl} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
+                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={20} /></label>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">وصف الرؤية</label>
-                    <textarea className="input-field p-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-24" value={settings.aboutDescription} onChange={e => setSettings({...settings, aboutDescription: e.target.value})} />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-black/5 pt-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المدير</label>
-                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.directorName} onChange={e => setSettings({...settings, directorName: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط فيديو المدير (Drive/Youtube/Upload)</label>
-                        <div className="flex gap-2">
-                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/10 rounded-2xl focus:border-brand-gold outline-none font-mono text-[10px]" value={settings.directorVideoUrl} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} />
-                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="video/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorVideoUrl: url })))} /><Upload size={18} /></label>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط صورة المدير (تظهر في الهيرو)</label>
-                        <div className="flex gap-2">
-                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.directorPhotoUrl} onChange={e => setSettings({...settings, directorPhotoUrl: e.target.value})} />
-                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorPhotoUrl: url })))} /><Upload size={18} /></label>
+                    <div className="space-y-6">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-brand-gold border-r-2 border-brand-gold pr-3">Hero Section (Main Page)</h3>
+                        
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">العنوان الرئيسي</label>
+                                <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.heroTitle} onChange={e => setSettings({...settings, heroTitle: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">العنوان الفرعي (تميز)</label>
+                                <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.heroSubtitle} onChange={e => setSettings({...settings, heroSubtitle: e.target.value})} />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <button type="submit" className="w-full py-4 bg-brand-gold text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl hover:brightness-110 transition-all">
-                    حفظ الإعدادات
-                </button>
-            </form>
+                <div className="space-y-4 pt-4">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">وصف الهيرو الترحيبي</label>
+                    <textarea className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-32 shadow-inner" value={settings.heroDescription} onChange={e => setSettings({...settings, heroDescription: e.target.value})} />
+                </div>
+
+                <div className="bg-brand-gold/5 rounded-[2.5rem] p-8 border border-brand-gold/10 space-y-8">
+                     <h3 className="text-xs font-black uppercase tracking-widest text-brand-gold border-r-2 border-brand-gold pr-3">About & Leadership</h3>
+                     
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان الرؤية</label>
+                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.aboutTitle} onChange={e => setSettings({...settings, aboutTitle: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة الرؤية</label>
+                            <div className="flex gap-3">
+                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.aboutImageUrl} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
+                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, aboutImageUrl: url })))} /><Upload size={20} /></label>
+                            </div>
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">نص الرؤية والرسالة</label>
+                            <textarea className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-32 shadow-inner" value={settings.aboutDescription} onChange={e => setSettings({...settings, aboutDescription: e.target.value})} />
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-brand-gold/10">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المدير الموقر</label>
+                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.directorName} onChange={e => setSettings({...settings, directorName: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">فيديو الكلمة الافتتاحية</label>
+                            <div className="flex gap-3">
+                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-[10px] shadow-inner" value={settings.directorVideoUrl} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} />
+                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="video/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorVideoUrl: url })))} /><Upload size={20} /></label>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة القائد (Main View)</label>
+                            <div className="flex gap-3">
+                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.directorPhotoUrl} onChange={e => setSettings({...settings, directorPhotoUrl: e.target.value})} />
+                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorPhotoUrl: url })))} /><Upload size={20} /></label>
+                            </div>
+                        </div>
+                     </div>
+                </div>
+            </motion.form>
         ) : (
             <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
-                <div className="card-luxury p-10 bg-brand-navy border-none text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/10 blur-[100px] rounded-full" />
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 blur-3xl rounded-full" />
+                <div className="card-luxury p-10 bg-brand-navy border-none text-white relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-brand-gold/10 blur-[120px] rounded-full group-hover:bg-brand-gold/20 transition-all duration-1000" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 blur-3xl rounded-full" />
                     
                     <div className="relative z-10">
-                        <div className="flex items-center gap-4 mb-8">
-                             <div className="w-12 h-12 bg-brand-gold text-brand-navy rounded-2xl flex items-center justify-center shadow-2xl">
-                                <HelpCircle size={24} />
-                             </div>
-                             <div>
-                                <h2 className="text-3xl font-display font-black italic">دليل النظام التقني</h2>
-                                <p className="text-[10px] uppercase font-mono tracking-[0.3em] text-brand-gold">Sadat Secondary Admin Documentation</p>
-                             </div>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12">
+                            <div className="flex items-center gap-4">
+                                <motion.div 
+                                    whileHover={{ rotate: 15 }}
+                                    className="w-14 h-14 bg-brand-gold text-brand-navy rounded-[1.5rem] flex items-center justify-center shadow-[0_0_50px_rgba(197,160,89,0.3)]"
+                                >
+                                    <HelpCircle size={32} />
+                                </motion.div>
+                                <div>
+                                    <h2 className="text-4xl font-display font-black italic">دليل النظام المتطور</h2>
+                                    <p className="text-[10px] uppercase font-mono tracking-[0.4em] text-brand-gold font-bold">Sadat Secondary Advanced Infrastructure</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-right">
+                                    <p className="text-[8px] text-white/40 uppercase font-bold">Status</p>
+                                    <p className="text-[10px] text-green-400 font-bold flex items-center gap-2">Operational <ShieldCheck size={10} /></p>
+                                </div>
+                                <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-right">
+                                    <p className="text-[8px] text-white/40 uppercase font-bold">Version</p>
+                                    <p className="text-[10px] text-brand-gold font-bold">v3.4.1 Platinum</p>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
-                             <div className="space-y-4">
-                                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-colors">
-                                    <h3 className="text-brand-gold font-bold mb-2 flex items-center justify-end gap-2 text-sm italic">
-                                        نظام التخزين (Cloudinary) <Cloud size={16} />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-right">
+                             <div className="space-y-6">
+                                <div className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] hover:bg-white/10 transition-all duration-500 hover:border-brand-gold/30">
+                                    <h3 className="text-brand-gold font-black mb-4 flex items-center justify-end gap-3 text-lg italic">
+                                        محرك الوسائط (Infinite Storage) <Cloud size={20} />
                                     </h3>
-                                    <p className="text-xs text-white/60 leading-relaxed italic">
-                                        يتم رفع كافة الصور والفيديوهات الآن على خوادم <b>Cloudinary</b>. هذا يضمن:
-                                        <br/>• سرعة فائقة في التحميل (CDN).
-                                        <br/>• ضغط تلقائي للحفاظ على الجودة وتقليل الحجم.
-                                        <br/>• دعم الفيديوهات الطويلة دون استهلاك مساحة قاعدة البيانات.
-                                    </p>
+                                    <div className="space-y-4 text-xs text-white/60 leading-relaxed italic">
+                                        <p>تم دمج خوارزميات Cloudinary لتحسين تجربة المستخدم:</p>
+                                        <ul className="space-y-2">
+                                            <li className="flex items-center justify-end gap-2 text-white/80">تنسيق تلقائي للصور (WebP/AVIF) <CheckCircle2 size={12} className="text-green-500" /></li>
+                                            <li className="flex items-center justify-end gap-2 text-white/80">ضغط الفيديو الذكي دون فقدان الجودة <CheckCircle2 size={12} className="text-green-500" /></li>
+                                            <li className="flex items-center justify-end gap-2 text-white/80">توليد تلقائي لصور المعاينة المصغرة <CheckCircle2 size={12} className="text-green-500" /></li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-colors text-[10px] font-mono text-white/40">
-                                    <p className="uppercase tracking-widest mb-2 border-b border-white/5 pb-2">Technical Stats</p>
-                                    <p>Database: Firestore Production</p>
-                                    <p>Storage proxy: Cloudinary API v1.1</p>
-                                    <p>Encryption: SSL/TLS 1.3</p>
+                                <div className="p-8 bg-black/20 border border-white/5 rounded-[2.5rem] text-[11px] font-mono text-white/40 space-y-2">
+                                    <p className="uppercase tracking-[0.3em] mb-4 border-b border-white/5 pb-2 text-brand-gold/50">Core System Architecture</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><span className="text-white/20">DB:</span> NoSQL Realtime</div>
+                                        <div><span className="text-white/20">SSR:</span> Edge Enabled</div>
+                                        <div><span className="text-white/20">HMR:</span> Hybrid Production</div>
+                                        <div><span className="text-white/20">SEC:</span> SSL/AES-256</div>
+                                    </div>
                                 </div>
                              </div>
 
-                             <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <h4 className="text-brand-gold font-bold text-xs">خطوات رفع فيديو:</h4>
-                                    <ul className="text-xs text-white/70 space-y-3 list-inside text-right">
-                                        <li className="flex gap-3 justify-end items-start italic"><span>اختار "إضافة فيديو" من القائمة الرئيسية.</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">1</span></li>
-                                        <li className="flex gap-3 justify-end items-start italic"><span>اضغط على أيقونة الرفع (السهم) واختار الفيديو من جهازك.</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">2</span></li>
-                                        <li className="flex gap-3 justify-end items-start italic"><span>انتظر حتى يكتمل شريط التحميل (يتم المعالجة سحابياً).</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">3</span></li>
-                                        <li className="flex gap-3 justify-end items-start italic"><span>اكتب عنوان الإنجاز ثم اضغط "حفظ ونشر".</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">4</span></li>
-                                    </ul>
+                             <div className="space-y-8">
+                                <div className="space-y-4">
+                                    <h4 className="text-brand-gold font-black text-sm uppercase tracking-widest border-r-4 border-brand-gold pr-3">Guide: Publishing Work</h4>
+                                    <div className="space-y-4">
+                                        {[
+                                            { t: "التخطيط", d: "اختار نوع المحتوى (صورة/فيديو/مشروع) من اللوحة الرئيسية." },
+                                            { t: "الرفع السحابي", d: "استخدم زر الرفع للأصول المحلية أو ضع رابطاً خارجياً." },
+                                            { t: "المعالجة", d: "انتظر شريط التحميل؛ يقوم النظام بضغط الملفات تلقائياً." },
+                                            { t: "الأرشفة", d: "اكتب الوصف المناسب ثم اضغط حفظ ليظهر فورياً للعامة." }
+                                        ].map((step, i) => (
+                                            <div key={i} className="flex gap-4 justify-end items-start group/step">
+                                                <div className="text-right">
+                                                    <h5 className="text-white font-bold text-xs group-hover/step:text-brand-gold transition-colors">{step.t}</h5>
+                                                    <p className="text-[10px] text-white/40 italic">{step.d}</p>
+                                                </div>
+                                                <span className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 text-brand-gold flex items-center justify-center font-bold text-xs shrink-0 group-hover/step:bg-brand-gold group-hover/step:text-brand-navy transition-all">{i+1}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="p-4 bg-brand-gold/10 border border-brand-gold/20 rounded-2xl">
-                                    <p className="text-[10px] text-brand-gold font-black italic text-center">ملاحظة: يمكنك أيضاً وضع روابط يوتيوب مباشرة في خانة الرابط وسيتعرف عليها النظام فوراً.</p>
-                                </div>
+                                <motion.div 
+                                    whileHover={{ scale: 1.02 }}
+                                    className="p-5 bg-brand-gold text-brand-navy rounded-2xl shadow-xl shadow-brand-gold/10 flex items-center justify-between gap-4 cursor-help"
+                                >
+                                    <HelpCircle size={20} />
+                                    <p className="text-[10px] font-black italic text-center leading-tight">للدعم الفني المباشر تواصل مع إدارة البرمجة عبر الواتساب الخاص بالدعم.</p>
+                                </motion.div>
                              </div>
                         </div>
                     </div>
