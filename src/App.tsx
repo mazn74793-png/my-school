@@ -11,6 +11,42 @@ import { onAuthStateChanged } from "firebase/auth";
 
 const DEFAULT_LOGO = "https://cdn.builder.io/api/v1/image/assets%2F4gcjufmuw5uzyaszz2aqra%2F765029423795%2F7195b09088ab47ee9ea10034a7499645";
 
+const formatMediaUrl = (url: string) => {
+  if (!url) return "";
+  
+  // Cloudinary Optimization (if it's a Cloudinary URL)
+  if (url.includes('cloudinary.com')) {
+    if (url.includes('/image/upload/')) {
+        return url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
+    }
+  }
+
+  // Google Drive Link Processing
+  if (url.includes('drive.google.com')) {
+    let id = "";
+    if (url.includes('/file/d/')) {
+        id = url.split('/file/d/')[1].split('/')[0];
+    } else if (url.includes('id=')) {
+        id = url.split('id=')[1].split('&')[0];
+    }
+    
+    if (id) {
+        return `https://drive.google.com/file/d/${id}/preview`;
+    }
+  }
+  
+  // YouTube Link Processing
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let id = "";
+      if (url.includes('v=')) id = url.split('v=')[1].split('&')[0];
+      else if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0];
+      
+      if (id) return `https://www.youtube.com/embed/${id}`;
+  }
+
+  return url;
+};
+
 const Navbar = ({ onAdminClick, user, settings }: { onAdminClick: () => void, user: any, settings: SiteSettings }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -109,12 +145,24 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
           مدرسة التميز والإبداع
         </motion.div>
         <motion.h1 
-          animate={{ opacity: [1, 0.7, 1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="text-6xl md:text-8xl lg:text-9xl font-display italic font-black text-brand-navy mb-8 leading-[0.85] tracking-tighter"
+          className="text-[18vw] md:text-[14vw] lg:text-[10vw] font-display italic font-black text-brand-navy mb-8 leading-[0.82] tracking-[-0.04em] uppercase"
         >
-          {settings.heroTitle} <br />
-          <span className="text-brand-gold">{settings.heroSubtitle}</span>
+          <motion.span 
+            initial={{ opacity: 0, x: -100 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="block"
+          >
+            {settings.heroTitle}
+          </motion.span>
+          <motion.span 
+            initial={{ opacity: 0, x: 100 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="text-brand-gold block text-right lg:text-left"
+          >
+            {settings.heroSubtitle}
+          </motion.span>
         </motion.h1>
         <p className="text-lg md:text-xl text-brand-navy/60 max-w-lg mb-10 leading-relaxed font-serif italic">
           {settings.heroDescription}
@@ -182,7 +230,7 @@ const App = () => {
   const [isAdminView, setIsAdminView] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSiteReady, setIsSiteReady] = useState(false);
+  const [isSiteReady, setIsSiteReady] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isDirectorVideoOpen, setIsDirectorVideoOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -211,9 +259,6 @@ const App = () => {
     const unsubscribeData = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(data);
-      if (!isSiteReady) {
-        setTimeout(() => setIsSiteReady(true), 2000);
-      }
     }, (error) => {
       console.error("Projects Fetch Error:", error);
       // Optional: toast error
@@ -262,50 +307,6 @@ const App = () => {
 
   return (
     <div className="bg-brand-paper selection:bg-brand-gold selection:text-white overflow-x-hidden">
-      <AnimatePresence mode="wait">
-        {!isSiteReady && (
-          <motion.div
-            key="preloader"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -100 }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
-            className="fixed inset-0 z-[500] bg-brand-navy flex flex-col items-center justify-center gap-8"
-          >
-            <div className="flex flex-col items-center gap-8">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: [1, 1.1, 1], opacity: 1 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="w-32 h-32 rounded-full bg-white p-2 shadow-2xl overflow-hidden"
-              >
-                <img src={settings.logoUrl || DEFAULT_LOGO} alt="Loading..." className="w-full h-full object-contain" />
-              </motion.div>
-              <div className="flex flex-col items-center">
-                <motion.h1 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: [1, 0.4, 1], y: 0 }}
-                  transition={{ 
-                    opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                    y: { delay: 0.5 }
-                  }}
-                  className="text-white font-display text-4xl md:text-5xl lg:text-6xl font-black tracking-widest italic text-center px-6"
-                >
-                  {settings.schoolName}
-                </motion.h1>
-                <div className="w-48 h-1 bg-white/10 rounded-full mt-10 overflow-hidden">
-                  <motion.div 
-                    initial={{ x: "-100%" }}
-                    animate={{ x: "100%" }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="w-full h-full bg-brand-gold"
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <Navbar onAdminClick={() => { !user ? setIsLoginModalOpen(true) : setIsAdminView(true); }} user={user} settings={settings} />
       
       <Hero settings={settings} onPlayVideo={() => setIsDirectorVideoOpen(true)} />
@@ -394,6 +395,13 @@ const App = () => {
                         : selectedProject.mediaUrl.replace('youtu.be/', 'youtube.com/embed/')
                       }
                       className="w-full h-full"
+                      allowFullScreen
+                    />
+                  ) : selectedProject.mediaUrl.includes('drive.google.com') ? (
+                    <iframe 
+                      src={formatMediaUrl(selectedProject.mediaUrl)}
+                      className="w-full h-full border-none"
+                      allow="autoplay"
                       allowFullScreen
                     />
                   ) : (
@@ -538,29 +546,66 @@ const App = () => {
             </motion.div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
               {filteredProjects.map((project, index) => (
                   <motion.div
                       key={project.id}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 30 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
-                      transition={{ delay: index * 0.1 }}
+                      transition={{ delay: index * 0.1, duration: 0.6, ease: "circOut" }}
                       onClick={() => setSelectedProject(project)}
-                      className="group cursor-pointer bg-white rounded-3xl overflow-hidden border border-black/5 shadow-sm hover:shadow-2xl hover:shadow-brand-gold/10 transition-all duration-500"
+                      className={`group cursor-pointer bg-white rounded-[2rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-[0_32px_64px_-16px_rgba(197,160,89,0.2)] transition-all duration-700 ${index % 3 === 1 ? 'lg:translate-y-12' : ''}`}
                   >
                       <div className="aspect-[4/5] overflow-hidden relative">
-                          <img 
-                              src={project.mediaUrl} 
-                              alt={project.title}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 text-right">
-                              <span className="text-brand-gold font-mono text-[10px] uppercase tracking-widest mb-2">{project.type || "unknown"}</span>
-                              <h3 className="text-white text-xl font-display font-black italic">{project.title || "بدون عنوان"}</h3>
-                          </div>
+                           {project.type === 'video' && project.mediaUrl.includes('cloudinary.com') ? (
+                               <video 
+                                 src={project.mediaUrl} 
+                                 className="w-full h-full object-cover" 
+                                 muted 
+                                 loop 
+                                 playsInline
+                                 onMouseOver={e => (e.target as HTMLVideoElement).play()}
+                                 onMouseOut={e => {
+                                     (e.target as HTMLVideoElement).pause();
+                                     (e.target as HTMLVideoElement).currentTime = 0;
+                                 }}
+                               />
+                           ) : (
+                               <img 
+                                   src={project.mediaUrl} 
+                                   alt={project.title}
+                                   loading="lazy"
+                                   decoding="async"
+                                   className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                               />
+                           )}
+                           
+                           {/* Overlays */}
+                           <div className="absolute inset-0 bg-brand-navy/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 backdrop-blur-[2px]" />
+                           
+                           <div className="absolute inset-0 flex flex-col justify-end p-8 text-right opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                               <div className="flex items-center justify-end gap-2 mb-4">
+                                   <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] bg-brand-gold text-white px-3 py-1 rounded-full shadow-lg">{project.level}</span>
+                                   <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] bg-white/20 text-white backdrop-blur-md px-3 py-1 rounded-full">{project.type}</span>
+                               </div>
+                               <h3 className="text-white text-3xl font-display font-black italic mb-3 leading-tight tracking-tight">{project.title || "بدون عنوان"}</h3>
+                               <p className="text-white/70 text-xs line-clamp-3 leading-relaxed font-serif italic mb-6">{project.description}</p>
+                               <div className="flex items-center justify-end gap-2 text-brand-gold text-[10px] font-black uppercase tracking-widest">
+                                   View Project <ArrowUpRight size={14} />
+                               </div>
+                           </div>
+                           
+                           {project.type === 'video' && (
+                               <div className="absolute top-6 right-6 w-12 h-12 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white ring-1 ring-white/20 group-hover:bg-brand-gold group-hover:ring-brand-gold transition-all duration-500">
+                                   <Video size={18} />
+                               </div>
+                           )}
+                           
+                           {/* Decorative number */}
+                           <div className="absolute top-6 left-6 text-white/5 font-display text-4xl font-black italic pointer-events-none group-hover:text-white/20 transition-colors">
+                            {index + 1 < 10 ? `0${index + 1}` : index + 1}
+                           </div>
                       </div>
                   </motion.div>
               ))}

@@ -19,7 +19,7 @@ async function startServer() {
   app.get("/api/health", (req, res) => {
     res.json({ 
       status: "ok", 
-      message: "Server is online. Images are now handled by Firebase Storage."
+      message: "Server is online. Portfolio is ready."
     });
   });
 

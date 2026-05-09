@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { db, auth, storage } from "../lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
+import { uploadToCloudinary } from "../lib/cloudinary";
 import { Project, ProjectType, SiteSettings, EducationLevel } from "../types";
-import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 const DEFAULT_ABOUT_IMAGE = "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800";
@@ -17,47 +18,62 @@ export const AdminDashboard = () => {
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const formatPreviewUrl = (url: string) => {
+    if (!url) return "";
+    if (url.includes('drive.google.com')) {
+        let id = "";
+        if (url.includes('/file/d/')) id = url.split('/file/d/')[1].split('/')[0];
+        else if (url.includes('id=')) id = url.split('id=')[1].split('&')[0];
+        if (id) return `https://drive.google.com/file/d/${id}/preview`;
+    }
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        let id = "";
+        if (url.includes('v=')) id = url.split('v=')[1].split('&')[0];
+        else if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0];
+        if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    return url;
+  };
+
+  // Helper to convert file to Base64 and compress if it's an image
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Basic check for size (Firestore limit is 1MB total for doc)
+        if (result.length > 800000) {
+          toast.error("الملف كبير جداً. يرجى اختيار صورة أصغر أو استخدام رابط خارجي.");
+          reject("Too large");
+        } else {
+          resolve(result);
+        }
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
   
   const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      console.log("Starting Firebase Storage Upload:", file.name);
-      
-      setIsUploading(true);
-      setUploadProgress(0);
-
-      try {
-        const storageRef = ref(storage, `school_portfolio/${Date.now()}-${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    try {
+        const url = await uploadToCloudinary(file, (progress) => {
             setUploadProgress(progress);
-          },
-          (error) => {
-            console.error("Upload error:", error);
-            toast.error("فشل الرفع. تأكد من تفعيل Storage في Firebase Console.");
-            setIsUploading(false);
-            setUploadProgress(0);
-            reject(error);
-          },
-          async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log("File available at", downloadURL);
-            callback(downloadURL);
-            setIsUploading(false);
-            setUploadProgress(0);
-            resolve(downloadURL);
-          }
-        );
-      } catch (error: any) {
-        toast.error("حدث خطأ في النظام");
+        });
+        callback(url);
+        toast.success("تم رفع الملف بنجاح!");
         setIsUploading(false);
         setUploadProgress(0);
-        reject(error);
-      }
-    });
+        return url;
+    } catch (error: any) {
+        toast.error(`فشل الرفع: ${error.message}`);
+        setIsUploading(false);
+        setUploadProgress(0);
+        throw error;
+    }
   };
 
   const [newProject, setNewProject] = useState({
@@ -191,30 +207,26 @@ export const AdminDashboard = () => {
       
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <div className="flex bg-white p-1 rounded-2xl border border-black/5 shadow-sm w-full md:w-auto overflow-x-auto">
-                <button 
-                    onClick={() => setActiveTab("works")}
-                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === 'works' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
-                >
-                    الأعمال
-                </button>
-                <button 
-                    onClick={() => setActiveTab("settings")}
-                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === 'settings' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
-                >
-                    الإعدادات
-                </button>
-                <button 
-                    onClick={() => setActiveTab("help")}
-                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === 'help' ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
-                >
-                    الدعم الفني
-                </button>
-                <div className="hidden lg:flex items-center px-4 border-l border-black/5">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${healthStatus === 'متصل' ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-[10px] font-black text-brand-navy/40">Firebase Storage: Active</span>
-                </div>
-          </div>
+                    <div className="flex bg-white p-1 rounded-2xl border border-black/10 shadow-sm w-full md:w-auto overflow-x-auto">
+                        {[
+                            { id: "works", label: "الأعمال", icon: Book },
+                            { id: "settings", label: "الإعدادات", icon: Globe },
+                            { id: "help", label: "الدعم والتعليمات", icon: HelpCircle }
+                        ].map((tab) => (
+                            <button 
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === tab.id ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
+                            >
+                                <tab.icon size={16} />
+                                {tab.label}
+                            </button>
+                        ))}
+                        <div className="hidden lg:flex items-center px-4 border-l border-black/5">
+                            <div className={`w-2 h-2 rounded-full mr-2 ${healthStatus === 'متصل' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                            <span className="text-[10px] font-mono font-bold text-brand-navy/40 uppercase tracking-tighter">System: {healthStatus === 'متصل' ? 'Live' : 'Offline'}</span>
+                        </div>
+                    </div>
           <button 
             onClick={() => auth.signOut()}
             className="flex items-center justify-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-bold transition-all hover:bg-red-100 w-full md:w-auto"
@@ -307,7 +319,7 @@ export const AdminDashboard = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">المحتوى الذكي (Auto-Upload)</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط المحتوى (رابط فيديو أو ارفع صورة)</label>
                                 <div className="flex gap-2">
                                     <input 
                                         placeholder="رابط مباشر أو ارفع ملفاً..."
@@ -319,6 +331,7 @@ export const AdminDashboard = () => {
                                         <input 
                                             type="file" 
                                             className="hidden" 
+                                            accept={newProject.type === 'video' ? 'video/*' : newProject.type === 'image' ? 'image/*' : '*/*'}
                                             onChange={async (e) => {
                                                 const file = e.target.files?.[0];
                                                 if (file) {
@@ -331,6 +344,7 @@ export const AdminDashboard = () => {
                                         {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
                                     </label>
                                 </div>
+                                <p className="text-[9px] text-brand-gold font-bold italic mt-1">تلميح: الصور يتم حفظها مجاناً في النظام، الفيديوهات يفضل وضع رابط من Google Drive.</p>
                                 {isUploading && <div className="w-full bg-black/5 h-1 rounded-full overflow-hidden mt-2"><motion.div animate={{ width: `${uploadProgress}%` }} className="h-full bg-brand-gold" /></div>}
                             </div>
                         </div>
@@ -340,7 +354,11 @@ export const AdminDashboard = () => {
                             <div className="rounded-2xl overflow-hidden aspect-video bg-brand-navy/5 border border-black/5 flex items-center justify-center">
                                 {newProject.mediaUrl ? (
                                     newProject.type === 'video' ? (
-                                        <video src={newProject.mediaUrl} className="w-full h-full object-cover" controls muted />
+                                        (newProject.mediaUrl.includes('drive.google.com') || newProject.mediaUrl.includes('youtube.com') || newProject.mediaUrl.includes('youtu.be')) ? (
+                                            <iframe src={formatPreviewUrl(newProject.mediaUrl)} className="w-full h-full border-none" allowFullScreen />
+                                        ) : (
+                                            <video src={newProject.mediaUrl} className="w-full h-full object-cover" controls muted />
+                                        )
                                     ) : (
                                         <img src={newProject.mediaUrl} className="w-full h-full object-cover" />
                                     )
@@ -372,22 +390,52 @@ export const AdminDashboard = () => {
                 )}
 
                 <div className="space-y-4">
-                    <h2 className="text-xl font-display font-black italic mb-4">الأعمال الحالية</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {projects.map(p => (
-                            <div key={p.id} className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm flex items-center justify-between group hover:border-brand-gold transition-all">
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <div className="w-12 h-12 bg-brand-navy/5 rounded-xl flex items-center justify-center text-brand-navy shrink-0 group-hover:bg-brand-gold/10 transition-colors">
-                                        {p.type === 'video' ? <Video size={20} /> : p.type === 'image' ? <ImageIcon size={20} /> : <Book size={20} />}
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-[10px] font-mono font-bold text-brand-navy/30 uppercase tracking-[0.2em]">Archived Entries</span>
+                        <h2 className="text-xl font-display font-black italic">الأعمال الحالية</h2>
+                    </div>
+                    
+                    <div className="bg-white border-t border-x border-black/10 rounded-t-3xl overflow-hidden">
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr,150px,100px,60px] bg-black/5 border-b border-black/10 p-4 text-[10px] font-mono font-bold uppercase tracking-widest text-brand-navy/40 text-right">
+                            <div className="pr-10">Entry Title</div>
+                            <div>Educational Level</div>
+                            <div>Type</div>
+                            <div className="text-center">Action</div>
+                        </div>
+                        {projects.length === 0 ? (
+                            <div className="p-12 text-center text-brand-navy/20 italic text-sm border-b border-black/10">لا توجد أعمال منشورة حالياً</div>
+                        ) : (
+                            <div className="divide-y divide-black/10">
+                                {projects.map(p => (
+                                    <div key={p.id} className="grid grid-cols-1 md:grid-cols-[1fr,150px,100px,60px] items-center p-4 hover:bg-brand-gold/5 transition-colors group">
+                                        <div className="flex items-center gap-4 min-w-0 pr-2">
+                                            <div className="w-8 h-8 bg-brand-navy/5 rounded-lg flex items-center justify-center text-brand-navy shrink-0 group-hover:bg-brand-gold group-hover:text-white transition-all">
+                                                {p.type === 'video' ? <Video size={14} /> : p.type === 'image' ? <ImageIcon size={14} /> : <Book size={14} />}
+                                            </div>
+                                            <h3 className="font-bold text-sm truncate">{p.title}</h3>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-brand-navy/60 text-right md:text-right px-2">
+                                            {p.level === 'secondary' ? 'المرحلة الثانوية' : p.level === 'preparatory' ? 'المرحلة الإعدادية' : 'المرحلة الابتدائية'}
+                                        </div>
+                                        <div className="text-[10px] font-mono font-bold text-brand-gold uppercase px-2">
+                                            {p.type}
+                                        </div>
+                                        <div className="flex justify-center">
+                                            <button 
+                                                onClick={() => p.id && handleDelete(p.id)} 
+                                                className="p-2 text-brand-navy/10 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                title="حذف"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <h3 className="font-bold text-sm truncate">{p.title}</h3>
-                                        <p className="text-[8px] text-brand-navy/30 font-bold uppercase tracking-widest">{p.level === 'secondary' ? 'ثانوي' : p.level === 'preparatory' ? 'إعدادي' : 'ابتدائي'}</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => p.id && handleDelete(p.id)} className="p-2 text-brand-navy/10 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
+                                ))}
                             </div>
-                        ))}
+                        )}
+                    </div>
+                    <div className="bg-black/5 border border-black/10 p-3 rounded-b-3xl text-center">
+                        <p className="text-[8px] font-mono uppercase tracking-[0.3em] text-brand-navy/40">End of Records — Sadat Secondary Archive</p>
                     </div>
                 </div>
             </>
@@ -407,7 +455,14 @@ export const AdminDashboard = () => {
                         <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط الشعار</label>
                         <div className="flex gap-2">
                             <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.logoUrl} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
-                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={18} /></label>
+                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={18} /></label>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط صورة "عن المدرسة"</label>
+                        <div className="flex gap-2">
+                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs text-right" value={settings.aboutImageUrl} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
+                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, aboutImageUrl: url })))} /><Upload size={18} /></label>
                         </div>
                     </div>
                 </div>
@@ -422,30 +477,57 @@ export const AdminDashboard = () => {
                 </button>
             </form>
         ) : (
-            <div className="space-y-6 animate-in fade-in duration-500">
-                <div className="card-luxury p-8 bg-brand-navy border-none text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 blur-3xl rounded-full" />
-                    <div className="flex items-center gap-3 border-b border-white/10 pb-4 mb-6">
-                        <ShieldCheck className="text-brand-gold" size={24} />
-                        <h2 className="text-xl font-display font-black italic">نظام الرفع الأساسي (Firebase)</h2>
-                    </div>
-                    <div className="space-y-6 relative z-10 text-right">
-                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                            <p className="text-sm font-bold text-brand-gold mb-2 flex items-center gap-2 justify-end">استخدام Firebase Storage <CheckCircle2 size={16} /></p>
-                            <p className="text-xs text-white/70 leading-relaxed italic">
-                                تم تفعيل نظام الرفع المباشر إلى <b>Firebase Storage</b>. هذا النظام يضمن استقراراً كاملاً وتكاملاً مع قاعدة البيانات الخاصة بك.
-                                <br />تأكد من تفعيل خدمة <b>Storage</b> من لوحة تحكم Firebase وتعيين القواعد (Rules) لتسمح بالرفع.
-                            </p>
+            <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
+                <div className="card-luxury p-10 bg-brand-navy border-none text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/10 blur-[100px] rounded-full" />
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 blur-3xl rounded-full" />
+                    
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 mb-8">
+                             <div className="w-12 h-12 bg-brand-gold text-brand-navy rounded-2xl flex items-center justify-center shadow-2xl">
+                                <HelpCircle size={24} />
+                             </div>
+                             <div>
+                                <h2 className="text-3xl font-display font-black italic">دليل النظام التقني</h2>
+                                <p className="text-[10px] uppercase font-mono tracking-[0.3em] text-brand-gold">Sadat Secondary Admin Documentation</p>
+                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-                                <p className="text-xs font-bold text-brand-gold mb-2">حل المشكلات</p>
-                                <p className="text-[10px] text-white/50 leading-relaxed">إذا فشل الرفع، غالباً ما يكون السبب هو عدم تفعيل "Storage" في حسابك أو وجود قيود في القواعد الأمنية (Security Rules).</p>
-                            </div>
-                            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-                                <p className="text-xs font-bold text-brand-gold mb-2">الأمان والسرعة</p>
-                                <p className="text-[10px] text-white/50 leading-relaxed">ملفاتك الآن مرتبطة مباشرة بمشروعك، مما يسرع من عملية العرض ويضمن خصوصية البيانات بالكامل.</p>
-                            </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
+                             <div className="space-y-4">
+                                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-colors">
+                                    <h3 className="text-brand-gold font-bold mb-2 flex items-center justify-end gap-2 text-sm italic">
+                                        نظام التخزين (Cloudinary) <Cloud size={16} />
+                                    </h3>
+                                    <p className="text-xs text-white/60 leading-relaxed italic">
+                                        يتم رفع كافة الصور والفيديوهات الآن على خوادم <b>Cloudinary</b>. هذا يضمن:
+                                        <br/>• سرعة فائقة في التحميل (CDN).
+                                        <br/>• ضغط تلقائي للحفاظ على الجودة وتقليل الحجم.
+                                        <br/>• دعم الفيديوهات الطويلة دون استهلاك مساحة قاعدة البيانات.
+                                    </p>
+                                </div>
+                                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-colors text-[10px] font-mono text-white/40">
+                                    <p className="uppercase tracking-widest mb-2 border-b border-white/5 pb-2">Technical Stats</p>
+                                    <p>Database: Firestore Production</p>
+                                    <p>Storage proxy: Cloudinary API v1.1</p>
+                                    <p>Encryption: SSL/TLS 1.3</p>
+                                </div>
+                             </div>
+
+                             <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <h4 className="text-brand-gold font-bold text-xs">خطوات رفع فيديو:</h4>
+                                    <ul className="text-xs text-white/70 space-y-3 list-inside text-right">
+                                        <li className="flex gap-3 justify-end items-start italic"><span>اختار "إضافة فيديو" من القائمة الرئيسية.</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">1</span></li>
+                                        <li className="flex gap-3 justify-end items-start italic"><span>اضغط على أيقونة الرفع (السهم) واختار الفيديو من جهازك.</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">2</span></li>
+                                        <li className="flex gap-3 justify-end items-start italic"><span>انتظر حتى يكتمل شريط التحميل (يتم المعالجة سحابياً).</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">3</span></li>
+                                        <li className="flex gap-3 justify-end items-start italic"><span>اكتب عنوان الإنجاز ثم اضغط "حفظ ونشر".</span> <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy flex items-center justify-center font-bold text-[10px] shrink-0">4</span></li>
+                                    </ul>
+                                </div>
+                                <div className="p-4 bg-brand-gold/10 border border-brand-gold/20 rounded-2xl">
+                                    <p className="text-[10px] text-brand-gold font-black italic text-center">ملاحظة: يمكنك أيضاً وضع روابط يوتيوب مباشرة في خانة الرابط وسيتعرف عليها النظام فوراً.</p>
+                                </div>
+                             </div>
                         </div>
                     </div>
                 </div>
