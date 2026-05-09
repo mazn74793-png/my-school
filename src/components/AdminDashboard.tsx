@@ -19,8 +19,18 @@ export const AdminDashboard = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const formatPreviewUrl = (url: string) => {
+  const formatPreviewUrl = (url: string, width: number = 800) => {
     if (!url) return "";
+
+    // Cloudinary Optimization
+    if (url.includes('cloudinary.com')) {
+      if (url.includes('/image/upload/')) {
+          return url.replace('/upload/', `/upload/f_auto,q_auto:eco,w_${width},c_limit/`);
+      }
+      if (url.includes('/video/upload/')) {
+          return url.replace('/upload/', '/upload/f_auto,q_auto:eco,vc_auto,vs_40/').replace(/\.[^/.]+$/, ".jpg");
+      }
+    }
     if (url.includes('drive.google.com')) {
         let id = "";
         if (url.includes('/file/d/')) id = url.split('/file/d/')[1].split('/')[0];
@@ -459,6 +469,26 @@ export const AdminDashboard = () => {
                         </div>
                     </div>
                     <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان الهيرو (كبير)</label>
+                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.heroTitle} onChange={e => setSettings({...settings, heroTitle: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان الهيرو (ذهبي)</label>
+                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.heroSubtitle} onChange={e => setSettings({...settings, heroSubtitle: e.target.value})} />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">وصف الهيرو</label>
+                    <textarea className="input-field p-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-20" value={settings.heroDescription} onChange={e => setSettings({...settings, heroDescription: e.target.value})} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-black/5 pt-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان "عن المدرسة"</label>
+                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.aboutTitle} onChange={e => setSettings({...settings, aboutTitle: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط صورة "عن المدرسة"</label>
                         <div className="flex gap-2">
                             <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs text-right" value={settings.aboutImageUrl} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
@@ -468,8 +498,29 @@ export const AdminDashboard = () => {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عن المدرسة (الرؤية)</label>
-                    <textarea className="input-field p-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-32" value={settings.aboutDescription} onChange={e => setSettings({...settings, aboutDescription: e.target.value})} />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">وصف الرؤية</label>
+                    <textarea className="input-field p-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-24" value={settings.aboutDescription} onChange={e => setSettings({...settings, aboutDescription: e.target.value})} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-black/5 pt-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المدير</label>
+                        <input className="input-field py-3 px-4 w-full bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none text-right font-bold" value={settings.directorName} onChange={e => setSettings({...settings, directorName: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط فيديو المدير (Drive/Youtube/Upload)</label>
+                        <div className="flex gap-2">
+                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/10 rounded-2xl focus:border-brand-gold outline-none font-mono text-[10px]" value={settings.directorVideoUrl} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} />
+                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="video/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorVideoUrl: url })))} /><Upload size={18} /></label>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط صورة المدير (تظهر في الهيرو)</label>
+                        <div className="flex gap-2">
+                            <input className="flex-1 input-field py-3 px-4 bg-brand-paper border border-black/5 rounded-2xl focus:border-brand-gold outline-none font-mono text-xs" value={settings.directorPhotoUrl} onChange={e => setSettings({...settings, directorPhotoUrl: e.target.value})} />
+                            <label className="cursor-pointer w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorPhotoUrl: url })))} /><Upload size={18} /></label>
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" className="w-full py-4 bg-brand-gold text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl hover:brightness-110 transition-all">

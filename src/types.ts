@@ -24,4 +24,5 @@ export interface SiteSettings {
     directorName: string;
     aboutImageUrl: string;
     directorVideoUrl?: string;
+    directorPhotoUrl?: string;
 }
