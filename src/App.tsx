@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy, Search, Filter, Trash2, Book, Image as ImageIcon, Video } from "lucide-react";
+import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy, Search, Filter, Trash2, Book, Image as ImageIcon, Video, Play, Loader2, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SKILLS, ACHIEVEMENTS } from "./data";
 import { db, auth, signIn } from "./lib/firebase";
@@ -75,65 +75,60 @@ const ProjectCard = ({ project, index, onClick }: { project: Project, index: num
 
   return (
     <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ delay: index * 0.1, duration: 0.6, ease: "circOut" }}
+        transition={{ delay: (index % 6) * 0.05, duration: 0.5 }}
         onClick={onClick}
-        className={`group cursor-pointer bg-white rounded-[2rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-[0_32px_64px_-16px_rgba(197,160,89,0.2)] transition-all duration-700 ${index % 3 === 1 ? 'lg:translate-y-12' : ''}`}
+        className="break-inside-avoid mb-8 group cursor-pointer bg-white/50 backdrop-blur-sm rounded-[2.5rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-[0_32px_64px_-16px_rgba(197,160,89,0.15)] transition-all duration-700"
     >
-        <div className="aspect-[4/5] overflow-hidden relative bg-brand-navy/5">
-            {project.type === 'video' && project.mediaUrl.includes('cloudinary.com') ? (
-                <video 
-                  src={formatMediaUrl(project.mediaUrl, 800, 'eco')} 
-                  poster={getMediaPreview(project.mediaUrl)}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`} 
-                  muted 
-                  loop 
-                  playsInline
-                  preload="metadata"
-                  onLoadedData={() => setImageLoaded(true)}
-                  onMouseOver={e => (e.target as HTMLVideoElement).play()}
-                  onMouseOut={e => {
-                      (e.target as HTMLVideoElement).pause();
-                      (e.target as HTMLVideoElement).currentTime = 0;
-                  }}
-                />
-            ) : (
-                <img 
+        <div className="relative overflow-hidden bg-brand-navy/5">
+            {project.type === 'video' ? (
+                <div className="relative aspect-video">
+                  <img 
                     src={getMediaPreview(project.mediaUrl)} 
-                    alt={project.title}
-                    loading="lazy"
-                    decoding="async"
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                     onLoad={() => setImageLoaded(true)}
-                    className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                />
+                  />
+                  {!imageLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="animate-spin text-brand-gold/20" size={24} />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                     <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-2xl group-hover:bg-brand-gold group-hover:scale-110 transition-all">
+                        <Play size={24} fill="currentColor" />
+                     </div>
+                  </div>
+                </div>
+            ) : (
+                <div className="relative">
+                  <img 
+                      src={getMediaPreview(project.mediaUrl)} 
+                      alt={project.title}
+                      loading="lazy"
+                      decoding="async"
+                      onLoad={() => setImageLoaded(true)}
+                      className={`w-full h-auto object-cover transition-all duration-1000 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  />
+                  {!imageLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center min-h-[200px]">
+                        <Loader2 className="animate-spin text-brand-gold/20" size={24} />
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 top-0 bg-brand-navy/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                </div>
             )}
-            
-            {/* Overlays */}
-            <div className="absolute inset-0 bg-brand-navy/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 backdrop-blur-[2px]" />
-            
-            <div className="absolute inset-0 flex flex-col justify-end p-8 text-right opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-                <div className="flex items-center justify-end gap-2 mb-4">
-                    <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] bg-brand-gold text-white px-3 py-1 rounded-full shadow-lg">{project.level}</span>
-                    <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] bg-white/20 text-white backdrop-blur-md px-3 py-1 rounded-full">{project.type}</span>
-                </div>
-                <h3 className="text-white text-3xl font-display font-black italic mb-3 leading-tight tracking-tight">{project.title || "بدون عنوان"}</h3>
-                <p className="text-white/70 text-xs line-clamp-3 leading-relaxed font-serif italic mb-6">{project.description}</p>
-                <div className="flex items-center justify-end gap-2 text-brand-gold text-[10px] font-black uppercase tracking-widest">
-                    View Project <ArrowUpRight size={14} />
-                </div>
+        </div>
+        
+        <div className="p-5 md:p-8 text-right">
+            <div className="flex items-center justify-end gap-3 mb-2">
+                <span className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] bg-brand-gold/10 text-brand-gold px-2 md:px-3 py-1 rounded-full shrink-0">{project.level}</span>
+                <h3 className="font-display font-black italic text-brand-navy text-sm md:text-lg leading-tight group-hover:text-brand-gold transition-colors line-clamp-1">{project.title}</h3>
             </div>
-            
-            {project.type === 'video' && (
-                <div className="absolute top-6 right-6 w-12 h-12 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white ring-1 ring-white/20 group-hover:bg-brand-gold group-hover:ring-brand-gold transition-all duration-500">
-                    <Video size={18} />
-                </div>
-            )}
-            
-            {/* Decorative number */}
-            <div className="absolute top-6 left-6 text-white/5 font-display text-4xl font-black italic pointer-events-none group-hover:text-white/20 transition-colors">
-              {index + 1 < 10 ? `0${index + 1}` : index + 1}
+            <p className="text-[9px] md:text-[10px] text-brand-navy/40 leading-relaxed font-black italic mb-3 line-clamp-2">{project.description}</p>
+            <div className="flex items-center justify-end gap-2 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-brand-gold group-hover:gap-4 transition-all">
+                مشاهدة التفاصيل <ArrowRight size={10} className="md:w-3 md:h-3" />
             </div>
         </div>
     </motion.div>
@@ -248,7 +243,7 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
           مدرسة التميز والإبداع
         </motion.div>
         <motion.h1 
-          className="text-[18vw] md:text-[14vw] lg:text-[10vw] font-display italic font-black text-brand-navy mb-8 leading-[0.82] tracking-[-0.04em] uppercase"
+          className="text-[14vw] md:text-[10vw] font-display italic font-black text-brand-navy mb-8 leading-[0.85] tracking-[-0.04em] uppercase"
         >
           <motion.span 
             initial={{ opacity: 0, x: -100 }}
@@ -370,7 +365,8 @@ const App = () => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(data);
       if (!isSiteReady) {
-        setTimeout(() => setIsSiteReady(true), 2500);
+        // Reduced timeout for snappier performance as requested
+        setTimeout(() => setIsSiteReady(true), 800);
       }
     }, (error) => {
       console.error("Projects Fetch Error:", error);
@@ -490,16 +486,16 @@ const App = () => {
             </div>
 
             {/* Loading Indicator */}
-            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
-               <div className="w-48 h-[2px] bg-white/10 rounded-full overflow-hidden">
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+               <div className="w-32 h-[1px] bg-white/10 rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ x: "-100%" }}
                     animate={{ x: "100%" }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
                     className="w-full h-full bg-brand-gold"
                   />
                </div>
-               <span className="text-white/20 font-mono text-[8px] uppercase tracking-widest">Initialising Academic Presence</span>
+               <span className="text-white/20 font-mono text-[7px] uppercase tracking-[0.3em] font-black">Fast Loading Experience</span>
             </div>
           </motion.div>
         )}
@@ -779,7 +775,7 @@ const App = () => {
             </motion.div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-8">
               {filteredProjects.map((project, index) => (
                   <ProjectCard 
                     key={project.id || `project-${index}`} 
@@ -837,7 +833,6 @@ const App = () => {
   );
 };
 
-const Loader2 = ({ className, size }: { className?: string, size?: number }) => <Settings className={className} size={size || 24} />;
 
 export default App;
 
