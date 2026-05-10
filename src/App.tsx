@@ -32,8 +32,16 @@ interface FirestoreErrorInfo {
 }
 
 const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
+  // Silence transient transport errors that are handled automatically by SDK
+  if (errorMessage.includes('transport errored') || errorMessage.includes('WebChannelConnection')) {
+    console.warn(`[Firestore Status] Path ${path}: Transient network reconnection in progress.`);
+    return;
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -234,9 +242,40 @@ const Navbar = ({ onAdminClick, user, settings }: { onAdminClick: () => void, us
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden bg-white border-b border-black/5 overflow-hidden"
           >
-            <div className="px-6 py-8 flex flex-col gap-6 text-right font-medium">
-              <a href="#about" onClick={() => setMobileMenu(false)}>{settings.aboutTitle}</a>
-              <a href="#works" onClick={() => setMobileMenu(false)}>معرض الأعمال</a>
+            <div className="px-6 py-8 flex flex-col gap-6 text-right">
+              <button 
+                onClick={() => {
+                  setMobileMenu(false);
+                  setTimeout(() => {
+                    document.getElementById('about')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 300);
+                }}
+                className="text-2xl font-display font-black italic text-brand-navy hover:text-brand-gold transition-all text-right"
+              >
+                {settings.aboutTitle}
+              </button>
+              <button 
+                onClick={() => {
+                  setMobileMenu(false);
+                  setTimeout(() => {
+                    document.getElementById('works')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 300);
+                }}
+                className="text-2xl font-display font-black italic text-brand-navy hover:text-brand-gold transition-all text-right"
+              >
+                معرض الأعمال
+              </button>
+              <button 
+                onClick={() => {
+                  setMobileMenu(false);
+                  setTimeout(() => {
+                    document.getElementById('skills')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 300);
+                }}
+                className="text-2xl font-display font-black italic text-brand-navy hover:text-brand-gold transition-all text-right"
+              >
+                المهارات
+              </button>
             </div>
           </motion.div>
         )}
@@ -664,83 +703,89 @@ const App = () => {
         )}
       </AnimatePresence>
 
-      {/* Modal Detail View */}
+      {/* Modal Detail View (Immersive) */}
       <AnimatePresence>
         {selectedProject && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="modal-overlay"
+            className="fixed inset-0 z-[200] bg-white/95 backdrop-blur-3xl flex items-center justify-center p-0 md:p-12"
             onClick={() => setSelectedProject(null)}
           >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="modal-content"
-              onClick={e => e.stopPropagation()}
+            <motion.button 
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="absolute top-6 left-6 z-[210] w-14 h-14 bg-brand-navy/10 hover:bg-brand-gold hover:text-white text-brand-navy rounded-full flex items-center justify-center transition-all shadow-2xl group border border-black/5"
+              onClick={() => setSelectedProject(null)}
             >
-              <button 
-                onClick={() => setSelectedProject(null)}
-                className="absolute top-6 right-6 z-20 w-12 h-12 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white hover:bg-white hover:text-brand-navy transition-all"
-              >
-                <X size={24} />
-              </button>
-              
-              <div className="w-full md:w-1/2 h-[300px] md:h-auto relative bg-brand-navy/5">
-                {selectedProject.type === 'video' ? (
-                  selectedProject.mediaUrl.includes('youtube.com') || selectedProject.mediaUrl.includes('youtu.be') ? (
-                    <iframe 
-                      src={selectedProject.mediaUrl.includes('watch?v=') 
-                        ? selectedProject.mediaUrl.replace('watch?v=', 'embed/') 
-                        : selectedProject.mediaUrl.replace('youtu.be/', 'youtube.com/embed/')
-                      }
-                      className="w-full h-full"
-                      allowFullScreen
-                    />
-                  ) : selectedProject.mediaUrl.includes('drive.google.com') ? (
-                    <iframe 
-                      src={formatMediaUrl(selectedProject.mediaUrl)}
-                      className="w-full h-full border-none"
-                      allow="autoplay"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video 
-                      src={selectedProject.mediaUrl} 
-                      className="w-full h-full object-contain bg-black" 
-                      controls 
-                      autoPlay
-                    />
-                  )
-                ) : (
-                  <img 
-                    src={formatMediaUrl(selectedProject.mediaUrl, 1000)} 
-                    className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as any).src = "https://placehold.co/800x600?text=Image+Link+Broken"; }}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/50 to-transparent pointer-events-none" />
-              </div>
-              
-              <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center text-right">
-                <div className="flex items-center justify-end gap-3 mb-6">
-                  <span className="text-[10px] font-mono py-1.5 px-3 bg-brand-gold text-white rounded-full uppercase tracking-widest">{selectedProject.level}</span>
-                  <span className="text-[10px] font-mono py-1.5 px-3 bg-brand-navy/5 text-brand-navy/40 rounded-full uppercase tracking-widest">{selectedProject.type}</span>
+              <X size={28} className="group-hover:rotate-90 transition-transform duration-500" />
+            </motion.button>
+
+            <div className="relative w-full h-full md:max-w-7xl md:h-[85vh] flex flex-col md:flex-row gap-0 md:gap-8 bg-brand-paper md:bg-white md:p-4 md:rounded-[3rem] md:border md:border-black/5 overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+                {/* Media Container */}
+                <div className="flex-1 min-h-0 bg-brand-navy/5 flex items-center justify-center relative">
+                    {selectedProject.type === 'video' ? (
+                        selectedProject.mediaUrl.includes('youtube.com') || selectedProject.mediaUrl.includes('youtu.be') ? (
+                          <iframe 
+                            src={selectedProject.mediaUrl.includes('watch?v=') 
+                              ? selectedProject.mediaUrl.replace('watch?v=', 'embed/') 
+                              : (selectedProject.mediaUrl.includes('youtu.be') ? `https://www.youtube.com/embed/${selectedProject.mediaUrl.split('/').pop()}` : selectedProject.mediaUrl)
+                            }
+                            className="w-full h-full"
+                            allowFullScreen
+                          />
+                        ) : selectedProject.mediaUrl.includes('drive.google.com') ? (
+                          <iframe 
+                            src={formatMediaUrl(selectedProject.mediaUrl)}
+                            className="w-full h-full border-none"
+                            allow="autoplay"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video 
+                            src={selectedProject.mediaUrl} 
+                            className="w-full h-full object-contain" 
+                            controls 
+                            autoPlay
+                          />
+                        )
+                    ) : (
+                        <img 
+                          src={formatMediaUrl(selectedProject.mediaUrl, 2000)} 
+                          className="w-full h-full object-contain"
+                          alt={selectedProject.title}
+                        />
+                    )}
                 </div>
-                <h2 className="text-4xl font-display font-black italic text-brand-navy mb-6">{selectedProject.title}</h2>
-                <div className="w-16 h-1 bg-brand-gold mb-8 ml-auto" />
-                <p className="text-lg text-brand-navy/70 leading-relaxed font-serif mb-8 whitespace-pre-wrap">
-                  {selectedProject.description}
-                </p>
-                {selectedProject.techStack && (
-                  <div className="p-4 border border-black/5 rounded-2xl bg-black/5 italic text-xs text-brand-navy/40">
-                    كلمات مفتاحية: {selectedProject.techStack}
-                  </div>
-                )}
-              </div>
-            </motion.div>
+
+                {/* Info Container */}
+                <div className="w-full md:w-96 flex flex-col justify-end text-right p-6 md:p-8 bg-white md:bg-transparent">
+                    <motion.div 
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="bg-brand-paper/50 md:bg-white/80 backdrop-blur-md p-8 rounded-[2rem] border border-black/5"
+                    >
+                        <div className="flex items-center justify-end gap-2 mb-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-brand-navy text-white px-4 py-1.5 rounded-full shadow-lg border border-white/10">{selectedProject.level}</span>
+                        </div>
+                        <h3 className="text-3xl md:text-4xl font-display font-black italic text-brand-navy mb-6 leading-tight">{selectedProject.title}</h3>
+                        <div className="w-12 h-1 bg-brand-gold/50 mb-6 ml-auto" />
+                        <p className="text-sm md:text-base text-brand-navy/70 leading-relaxed font-black italic mb-8 overflow-y-auto max-h-[30vh] no-scrollbar">
+                           {selectedProject.description}
+                        </p>
+                        <div className="flex flex-wrap justify-end gap-2">
+                           {(selectedProject.techStack || 'Academic Achievement').split(',').map((tag, i) => (
+                             <span key={i} className="text-[9px] text-brand-navy border border-brand-navy/10 px-2 py-1 rounded-md uppercase font-black tracking-widest bg-brand-navy/5">
+                               {tag.trim()}
+                             </span>
+                           ))}
+                        </div>
+                    </motion.div>
+                </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -752,7 +797,7 @@ const App = () => {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="py-32 px-6 max-w-7xl mx-auto border-t border-black/5"
+        className="py-32 px-6 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24"
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-24 items-center">
           <motion.div 
@@ -822,7 +867,7 @@ const App = () => {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 1 }}
-        className="py-32 px-6 max-w-7xl mx-auto"
+        className="py-32 px-6 max-w-7xl mx-auto scroll-mt-24"
       >
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
@@ -894,6 +939,43 @@ const App = () => {
             <p className="text-brand-navy/30 italic text-2xl">لا توجد مشاريع تطابق بحثك حالياً...</p>
           </div>
         )}
+      </motion.section>
+      
+      {/* Skills Section */}
+      <motion.section 
+        id="skills" 
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        className="py-32 px-6 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24"
+      >
+        <div className="text-right mb-16">
+          <span className="text-[10px] font-mono text-brand-gold uppercase tracking-[0.4em] mb-2 block">Expertise</span>
+          <h2 className="text-5xl md:text-7xl font-display font-black italic text-brand-navy">مهاراتنا البرمجية</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {SKILLS.map((skillGroup, idx) => (
+            <motion.div 
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.1 }}
+              className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm hover:border-brand-gold transition-colors text-right"
+            >
+              <div className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center text-brand-navy mb-6 ml-auto">
+                <Settings size={24} />
+              </div>
+              <h3 className="text-xl font-display font-black italic text-brand-navy mb-4">{skillGroup.category === 'Frontend' ? 'واجهة المستخدم' : skillGroup.category === 'Backend' ? 'الخلفية البرمجية' : 'أدوات وعلوم'}</h3>
+              <div className="flex flex-wrap justify-end gap-2">
+                {skillGroup.items.map((item, i) => (
+                  <span key={i} className="px-3 py-1 bg-brand-paper text-brand-navy/60 rounded-full text-[10px] font-black uppercase tracking-widest">{item}</span>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </motion.section>
 
       {/* Footer */}

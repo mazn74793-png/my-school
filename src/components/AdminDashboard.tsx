@@ -27,8 +27,15 @@ interface FirestoreErrorInfo {
 }
 
 const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
+  if (errorMessage.includes('transport errored') || errorMessage.includes('WebChannelConnection')) {
+    console.warn(`[Admin Status] Path ${path}: Transient network reconnection.`);
+    return;
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
