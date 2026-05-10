@@ -105,10 +105,36 @@ export const AdminDashboard = () => {
   };
   
   const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
-    // Basic size check to prevent massive files from timing out on mobile
-    if (file.size > 100 * 1024 * 1024) { // 100MB limit for example
-        toast.error("الملف كبير جداً (أكثر من 100 ميجابايت). يرجى تقليل حجمه أو تقسيمه.");
+    // Increased limit to 500MB for luxury experience, with a warning for mobile users
+    const MAX_SIZE = 500 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+        toast.error("الملف ضخم جداً (أكثر من 500 ميجابايت). يرجى ضغطه أولاً.");
         throw new Error("File too large");
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+        toast.custom((t) => (
+            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 overflow-hidden`}>
+                <div className="flex-1 w-0 p-4">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0 pt-0.5">
+                            <Cloud className="h-10 w-10 text-brand-gold" />
+                        </div>
+                        <div className="mr-3 flex-1 text-right">
+                            <p className="text-sm font-black text-brand-navy">تنبيه: حجم الملف كبير</p>
+                            <p className="mt-1 text-xs text-brand-navy/60 font-bold italic">
+                                أنت ترفع ملفاً بحجم {(file.size / (1024 * 1024)).toFixed(1)}MB. تأكد من استقرار الإنترنت لديك.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex border-l border-gray-200">
+                    <button onClick={() => toast.dismiss(t.id)} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-brand-navy hover:text-brand-gold focus:outline-none">
+                        حسناً
+                    </button>
+                </div>
+            </div>
+        ), { duration: 6000 });
     }
 
     setIsUploading(true);
@@ -193,6 +219,13 @@ export const AdminDashboard = () => {
     const unsubscribeWorks = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(data);
+    }, (error) => {
+      console.error("Firestore Projects Listener Error:", error);
+      // Handle the transport error gracefully
+      if (error.message.includes('Listen stream errored') || error.message.includes('WebChannelConnection')) {
+          setHealthStatus("تحميل...");
+          // No need to show error to user as experimentalForceLongPolling handles retries
+      }
     });
 
     // Fetch Settings
@@ -309,31 +342,31 @@ export const AdminDashboard = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
                 >
-                    <button onClick={() => { setNewProject({ ...newProject, type: 'image' }); setIsAdding(true); }} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden">
-                        <motion.div whileHover={{ scale: 1.1 }} className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
-                            <ImageIcon size={24} />
+                    <button onClick={() => { setNewProject({ ...newProject, type: 'image' }); setIsAdding(true); }} className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden active:scale-95">
+                        <motion.div whileHover={{ scale: 1.1 }} className="w-10 h-10 md:w-12 md:h-12 bg-brand-navy/5 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
+                            <ImageIcon size={20} className="md:w-6 md:h-6" />
                         </motion.div>
-                        <p className="font-black text-sm uppercase italic tracking-tighter">New Image</p>
-                        <p className="text-[10px] text-brand-navy/40 font-bold">إضافة صورة</p>
+                        <p className="font-black text-[10px] md:text-sm uppercase italic tracking-tighter">New Image</p>
+                        <p className="text-[8px] md:text-[10px] text-brand-navy/40 font-bold">إضافة صورة</p>
                     </button>
-                    <button onClick={() => { setNewProject({ ...newProject, type: 'video' }); setIsAdding(true); }} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden">
-                        <motion.div whileHover={{ scale: 1.1 }} className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
-                            <Video size={24} />
+                    <button onClick={() => { setNewProject({ ...newProject, type: 'video' }); setIsAdding(true); }} className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden active:scale-95">
+                        <motion.div whileHover={{ scale: 1.1 }} className="w-10 h-10 md:w-12 md:h-12 bg-brand-navy/5 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
+                            <Video size={20} className="md:w-6 md:h-6" />
                         </motion.div>
-                        <p className="font-black text-sm uppercase italic tracking-tighter">New Video</p>
-                        <p className="text-[10px] text-brand-navy/40 font-bold">إضافة فيديو</p>
+                        <p className="font-black text-[10px] md:text-sm uppercase italic tracking-tighter">New Video</p>
+                        <p className="text-[8px] md:text-[10px] text-brand-navy/40 font-bold">إضافة فيديو</p>
                     </button>
-                    <button onClick={() => { setNewProject({ ...newProject, type: 'project' }); setIsAdding(true); }} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden">
-                        <motion.div whileHover={{ scale: 1.1 }} className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
-                            <Book size={24} />
+                    <button onClick={() => { setNewProject({ ...newProject, type: 'project' }); setIsAdding(true); }} className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] border border-black/5 shadow-sm hover:shadow-xl hover:border-brand-gold transition-all text-center group relative overflow-hidden active:scale-95">
+                        <motion.div whileHover={{ scale: 1.1 }} className="w-10 h-10 md:w-12 md:h-12 bg-brand-navy/5 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4 group-hover:bg-brand-gold group-hover:text-white transition-colors">
+                            <Book size={20} className="md:w-6 md:h-6" />
                         </motion.div>
-                        <p className="font-black text-sm uppercase italic tracking-tighter">New Entry</p>
-                        <p className="text-[10px] text-brand-navy/40 font-bold">إضافة مشروع</p>
+                        <p className="font-black text-[10px] md:text-sm uppercase italic tracking-tighter">New Entry</p>
+                        <p className="text-[8px] md:text-[10px] text-brand-navy/40 font-bold">إضافة مشروع</p>
                     </button>
-                    <div className="bg-brand-navy p-6 rounded-[2.5rem] border border-white/10 shadow-2xl text-center relative overflow-hidden">
+                    <div className="bg-brand-navy p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-2xl text-center relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand-gold/10 blur-2xl rounded-full" />
-                        <p className="text-brand-gold font-black text-4xl italic mb-1 relative z-10">{projects.length}</p>
-                        <p className="font-black text-[10px] text-white uppercase tracking-[0.2em] relative z-10">Total Assets</p>
+                        <p className="text-brand-gold font-black text-2xl md:text-4xl italic mb-1 relative z-10">{projects.length}</p>
+                        <p className="font-black text-[8px] md:text-[10px] text-white uppercase tracking-[0.1em] md:tracking-[0.2em] relative z-10">Total Assets</p>
                     </div>
                 </motion.div>
 
@@ -398,11 +431,11 @@ export const AdminDashboard = () => {
                                 <div className="flex gap-2">
                                     <input 
                                         placeholder="رابط مباشر أو ارفع ملفاً..."
-                                        className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-3 px-4 focus:border-brand-gold outline-none font-mono text-xs text-right"
+                                        className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs text-right shadow-inner"
                                         value={newProject.mediaUrl}
                                         onChange={e => setNewProject({...newProject, mediaUrl: e.target.value})}
                                     />
-                                    <label className="cursor-pointer bg-brand-navy text-white px-4 rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all disabled:opacity-50">
+                                    <label className="cursor-pointer bg-brand-navy text-white w-14 h-14 md:w-auto md:px-6 rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg active:scale-95 disabled:opacity-50">
                                         <input 
                                             type="file" 
                                             className="hidden" 
@@ -416,11 +449,27 @@ export const AdminDashboard = () => {
                                                 }
                                             }}
                                         />
-                                        {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+                                        {isUploading ? <Loader2 className="animate-spin" size={24} /> : <Upload size={24} />}
                                     </label>
                                 </div>
-                                <p className="text-[9px] text-brand-gold font-black italic mt-1">تلميح: جاري استخدام نظام Cloudinary الفائق للأرشفة؛ يمكنك رفع فيديوهات حتى 100 ميجابايت مباشرة.</p>
-                                {isUploading && <div className="w-full bg-black/5 h-1 rounded-full overflow-hidden mt-2"><motion.div animate={{ width: `${uploadProgress}%` }} className="h-full bg-brand-gold" /></div>}
+                                <p className="text-[10px] text-brand-gold font-black italic mt-2 flex items-center justify-end gap-1">
+                                    <ShieldCheck size={12} />
+                                    نظام الحماية والأرشفة الفائق Cloudinary (Limit: 500MB)
+                                </p>
+                                {isUploading && (
+                                    <div className="mt-4 space-y-2">
+                                        <div className="w-full bg-black/5 h-2 rounded-full overflow-hidden shadow-inner">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${uploadProgress}%` }} 
+                                                className="h-full bg-gradient-to-r from-brand-gold to-brand-navy transition-all duration-300" 
+                                            />
+                                        </div>
+                                        <p className="text-[10px] font-black text-brand-navy/60 text-left italic uppercase tracking-widest">
+                                            Uploading: {uploadProgress}% Completed
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -492,8 +541,8 @@ export const AdminDashboard = () => {
                                                 <p className="md:hidden text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{p.type} • {p.level}</p>
                                             </div>
                                         </div>
-                                        <div className="hidden md:block text-[10px] font-black text-brand-navy/50 text-right px-2 italic">
-                                            {p.level === 'secondary' ? 'Secondary' : p.level === 'preparatory' ? 'Preparatory' : 'Primary'}
+                                <div className="hidden md:block text-[10px] font-black text-brand-navy/40 text-right px-2 italic uppercase tracking-widest">
+                                            {p.level === 'secondary' ? 'Secondary' : p.level === 'preparatory' ? 'Preparatory' : p.level === 'primary' ? 'Primary' : 'General'}
                                         </div>
                                         <div className="hidden md:block text-[10px] font-black text-brand-gold uppercase px-2 tracking-widest">
                                             {p.type}
