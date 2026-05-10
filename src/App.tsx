@@ -428,6 +428,7 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterLevel, setFilterLevel] = useState<EducationLevel | "all">("all");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isAnnouncementsModalOpen, setIsAnnouncementsModalOpen] = useState(false);
   const [settings, setSettings] = useState<SiteSettings>({
     schoolName: "مدرسة محمد أنور السادات",
     logoUrl: DEFAULT_LOGO,
@@ -615,22 +616,26 @@ const App = () => {
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="relative z-10 -mt-16 md:-mt-24 mb-20 px-6"
+            className="relative z-10 -mt-20 md:-mt-24 mb-20 px-4 md:px-6"
           >
              <div className="max-w-7xl mx-auto">
-                <div className="bg-brand-navy p-1 rounded-[2.5rem] md:rounded-full border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row items-stretch">
-                   <div className="bg-brand-gold px-8 py-4 flex items-center justify-center gap-3 shrink-0 rounded-[2.2rem] md:rounded-full">
-                      <Bell size={20} className="text-brand-navy animate-bounce" />
+                <div className="bg-brand-navy p-1.5 rounded-[2.5rem] md:rounded-full border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row items-center">
+                   <button 
+                      onClick={() => setIsAnnouncementsModalOpen(true)}
+                      className="bg-brand-gold px-8 py-4 flex items-center justify-center gap-3 shrink-0 rounded-[2.2rem] md:rounded-full hover:scale-105 transition-transform active:scale-95 group"
+                   >
+                      <Bell size={20} className="text-brand-navy animate-bounce group-hover:animate-none" />
                       <span className="font-display font-black italic text-brand-navy whitespace-nowrap">إعلانات هامة</span>
-                   </div>
+                      <ChevronLeft size={16} className="text-brand-navy/40" />
+                   </button>
                    
-                   <div className="flex-1 px-8 py-4 overflow-hidden relative flex items-center">
+                   <div className="w-full flex-1 px-8 py-4 overflow-hidden relative flex items-center">
                       <div className="flex animate-marquee whitespace-nowrap gap-12 group hover:[animation-play-state:paused]">
                          {announcements.map((ann, i) => (
                             <div key={ann.id || i} className="flex items-center gap-3">
-                               <div className={`w-2 h-2 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
-                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none">
-                                  <span className="text-brand-gold ml-2">[{ann.title}]</span>
+                               <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
+                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
+                                  <span className="text-brand-gold shrink-0">[{ann.title}]</span>
                                   {ann.content}
                                </span>
                             </div>
@@ -638,9 +643,9 @@ const App = () => {
                          {/* Duplicate for seamless effect */}
                          {announcements.map((ann, i) => (
                             <div key={`dup-${ann.id || i}`} className="flex items-center gap-3">
-                               <div className={`w-2 h-2 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
-                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none">
-                                  <span className="text-brand-gold ml-2">[{ann.title}]</span>
+                               <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
+                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
+                                  <span className="text-brand-gold shrink-0">[{ann.title}]</span>
                                   {ann.content}
                                </span>
                             </div>
@@ -649,6 +654,47 @@ const App = () => {
                    </div>
                 </div>
              </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Announcements Modal All List */}
+      <AnimatePresence>
+        {isAnnouncementsModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-brand-navy/95 backdrop-blur-xl flex items-center justify-center p-6"
+            onClick={() => setIsAnnouncementsModalOpen(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-brand-paper w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-[3rem] shadow-2xl flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-8 border-b border-black/5 flex items-center justify-between">
+                 <button onClick={() => setIsAnnouncementsModalOpen(false)} className="w-10 h-10 bg-black/5 rounded-full flex items-center justify-center hover:bg-brand-gold hover:text-white transition-all"><X size={20}/></button>
+                 <div className="text-right">
+                    <h3 className="text-2xl font-display font-black italic text-brand-navy">كافة الإعلانات</h3>
+                    <p className="text-xs text-brand-gold font-black tracking-widest text-right">OFFICIAL SCHOOL DECREES</p>
+                 </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-8 space-y-4 no-scrollbar">
+                 {announcements.map((ann) => (
+                    <div key={ann.id} className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm hover:border-brand-gold transition-all text-right">
+                       <div className="flex items-center justify-end gap-3 mb-2">
+                          <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 text-white' : ann.type === 'event' ? 'bg-brand-gold text-white' : 'bg-brand-navy text-brand-gold'}`}>{ann.type}</span>
+                          <h4 className="font-black italic text-brand-navy">{ann.title}</h4>
+                       </div>
+                       <p className="text-sm text-brand-navy/60 italic leading-relaxed">{ann.content}</p>
+                    </div>
+                 ))}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
