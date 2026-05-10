@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAIa9SJQKJhjwwBE7dzZqNNEonuD-y_NE8",
@@ -13,7 +13,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, import.meta.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-ef7adc6e-5ff5-4b25-bbcf-f6777f76d7ef");
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, import.meta.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-ef7adc6e-5ff5-4b25-bbcf-f6777f76d7ef");
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 

@@ -105,6 +105,12 @@ export const AdminDashboard = () => {
   };
   
   const handleFileUpload = async (file: File, callback: (url: string) => void): Promise<string> => {
+    // Basic size check to prevent massive files from timing out on mobile
+    if (file.size > 100 * 1024 * 1024) { // 100MB limit for example
+        toast.error("الملف كبير جداً (أكثر من 100 ميجابايت). يرجى تقليل حجمه أو تقسيمه.");
+        throw new Error("File too large");
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
     
@@ -118,7 +124,8 @@ export const AdminDashboard = () => {
         setUploadProgress(0);
         return url;
     } catch (error: any) {
-        toast.error(`فشل الرفع: ${error.message}`);
+        console.error("Upload Failure Details:", error);
+        toast.error(`فشل الرفع: ${error.message || "خطأ مجهول أثناء الرفع"}`);
         setIsUploading(false);
         setUploadProgress(0);
         throw error;
@@ -263,34 +270,36 @@ export const AdminDashboard = () => {
     <div className="min-h-screen bg-brand-paper px-4 md:px-8 pt-24 pb-20 text-brand-navy">
       <Toaster position="bottom-right" />
       
-      <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                    <div className="flex bg-white p-1 rounded-2xl border border-black/10 shadow-sm w-full md:w-auto overflow-x-auto">
+      <div className="max-w-5xl mx-auto px-1 md:px-0">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+                    <div className="flex bg-white p-1.5 rounded-[2rem] border border-black/10 shadow-sm w-full md:w-auto overflow-x-auto scrollbar-hide no-scrollbar">
                         {[
                             { id: "works", label: "الأعمال", icon: Book },
                             { id: "settings", label: "الإعدادات", icon: Globe },
-                            { id: "help", label: "الدعم والتعليمات", icon: HelpCircle }
+                            { id: "help", label: "الدليل الرسمي", icon: HelpCircle }
                         ].map((tab) => (
                             <button 
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all text-sm whitespace-nowrap ${activeTab === tab.id ? 'bg-brand-navy text-white shadow-lg' : 'text-brand-navy/60 hover:bg-black/5'}`}
+                                className={`flex items-center gap-2 px-5 md:px-8 py-3 rounded-2xl font-black transition-all text-sm whitespace-nowrap ${activeTab === tab.id ? 'bg-brand-navy text-white shadow-[0_10px_30px_rgba(30,41,59,0.3)] scale-105 z-10' : 'text-brand-navy/60 hover:bg-black/5'}`}
                             >
-                                <tab.icon size={16} />
+                                <tab.icon size={18} />
                                 {tab.label}
                             </button>
                         ))}
-                        <div className="hidden lg:flex items-center px-4 border-l border-black/5">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${healthStatus === 'متصل' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                            <span className="text-[10px] font-mono font-bold text-brand-navy/40 uppercase tracking-tighter">System: {healthStatus === 'متصل' ? 'Live' : 'Offline'}</span>
+                        <div className="hidden lg:flex items-center px-6 border-l border-black/5">
+                            <div className={`w-2.5 h-2.5 rounded-full mr-3 ${healthStatus === 'متصل' ? 'bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`} />
+                            <span className="text-[10px] font-mono font-black text-brand-navy/40 uppercase tracking-widest">Core: {healthStatus === 'متصل' ? 'Live' : 'Syncing'}</span>
                         </div>
                     </div>
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => auth.signOut()}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-bold transition-all hover:bg-red-100 w-full md:w-auto"
+            className="flex items-center justify-center gap-2 px-8 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black transition-all hover:bg-red-600 hover:text-white w-full md:w-auto shadow-sm"
           >
-            <LogOut size={16} /> تسجيل الخروج
-          </button>
+            <LogOut size={18} /> تسجيل الخروج
+          </motion.button>
         </div>
 
         {activeTab === "works" ? (
@@ -410,7 +419,7 @@ export const AdminDashboard = () => {
                                         {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
                                     </label>
                                 </div>
-                                <p className="text-[9px] text-brand-gold font-bold italic mt-1">تلميح: الصور يتم حفظها مجاناً في النظام، الفيديوهات يفضل وضع رابط من Google Drive.</p>
+                                <p className="text-[9px] text-brand-gold font-black italic mt-1">تلميح: جاري استخدام نظام Cloudinary الفائق للأرشفة؛ يمكنك رفع فيديوهات حتى 100 ميجابايت مباشرة.</p>
                                 {isUploading && <div className="w-full bg-black/5 h-1 rounded-full overflow-hidden mt-2"><motion.div animate={{ width: `${uploadProgress}%` }} className="h-full bg-brand-gold" /></div>}
                             </div>
                         </div>
@@ -461,38 +470,42 @@ export const AdminDashboard = () => {
                         <h2 className="text-xl font-display font-black italic">الأعمال الحالية</h2>
                     </div>
                     
-                    <div className="bg-white border-t border-x border-black/10 rounded-t-3xl overflow-hidden">
-                        <div className="grid grid-cols-1 md:grid-cols-[1fr,150px,100px,60px] bg-black/5 border-b border-black/10 p-4 text-[10px] font-mono font-bold uppercase tracking-widest text-brand-navy/40 text-right">
-                            <div className="pr-10">Entry Title</div>
-                            <div>Educational Level</div>
-                            <div>Type</div>
-                            <div className="text-center">Action</div>
+                    <div className="bg-white border-t border-x border-black/10 rounded-t-[2.5rem] overflow-hidden shadow-sm">
+                        <div className="hidden md:grid grid-cols-[1fr,150px,100px,60px] bg-brand-navy p-5 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">
+                            <div className="pr-10 text-brand-gold">Entry Content</div>
+                            <div>Structure</div>
+                            <div>Format</div>
+                            <div className="text-center">Manage</div>
                         </div>
                         {projects.length === 0 ? (
-                            <div className="p-12 text-center text-brand-navy/20 italic text-sm border-b border-black/10">لا توجد أعمال منشورة حالياً</div>
+                            <div className="p-16 text-center text-brand-navy/20 italic text-sm border-b border-black/10 bg-brand-paper/30">لا توجد أعمال منشورة حالياً في الأرشيف</div>
                         ) : (
-                            <div className="divide-y divide-black/10">
+                            <div className="divide-y divide-black/5 bg-white">
                                 {projects.map(p => (
-                                    <div key={p.id} className="grid grid-cols-1 md:grid-cols-[1fr,150px,100px,60px] items-center p-4 hover:bg-brand-gold/5 transition-colors group">
-                                        <div className="flex items-center gap-4 min-w-0 pr-2">
-                                            <div className="w-8 h-8 bg-brand-navy/5 rounded-lg flex items-center justify-center text-brand-navy shrink-0 group-hover:bg-brand-gold group-hover:text-white transition-all">
-                                                {p.type === 'video' ? <Video size={14} /> : p.type === 'image' ? <ImageIcon size={14} /> : <Book size={14} />}
+                                    <div key={p.id} className="flex flex-col md:grid md:grid-cols-[1fr,150px,100px,60px] md:items-center p-6 md:p-5 hover:bg-brand-gold/5 transition-all group relative">
+                                        <div className="flex items-center gap-5 min-w-0 pr-2 mb-6 md:mb-0">
+                                            <div className="w-14 h-14 md:w-10 md:h-10 bg-brand-navy/5 rounded-[1.25rem] md:rounded-xl flex items-center justify-center text-brand-navy shrink-0 group-hover:bg-brand-navy group-hover:text-white transition-all shadow-inner">
+                                                {p.type === 'video' ? <Video size={20} /> : p.type === 'image' ? <ImageIcon size={20} /> : <Book size={20} />}
                                             </div>
-                                            <h3 className="font-bold text-sm truncate">{p.title}</h3>
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="font-black text-base md:text-sm truncate leading-tight mb-1">{p.title}</h3>
+                                                <p className="md:hidden text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{p.type} • {p.level}</p>
+                                            </div>
                                         </div>
-                                        <div className="text-[10px] font-bold text-brand-navy/60 text-right md:text-right px-2">
-                                            {p.level === 'secondary' ? 'المرحلة الثانوية' : p.level === 'preparatory' ? 'المرحلة الإعدادية' : 'المرحلة الابتدائية'}
+                                        <div className="hidden md:block text-[10px] font-black text-brand-navy/50 text-right px-2 italic">
+                                            {p.level === 'secondary' ? 'Secondary' : p.level === 'preparatory' ? 'Preparatory' : 'Primary'}
                                         </div>
-                                        <div className="text-[10px] font-mono font-bold text-brand-gold uppercase px-2">
+                                        <div className="hidden md:block text-[10px] font-black text-brand-gold uppercase px-2 tracking-widest">
                                             {p.type}
                                         </div>
-                                        <div className="flex justify-center">
+                                        <div className="flex md:block justify-end pt-4 md:pt-0 border-t md:border-none border-black/5">
                                             <button 
                                                 onClick={() => p.id && handleDelete(p.id)} 
-                                                className="p-2 text-brand-navy/10 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                title="حذف"
+                                                className="w-full md:w-10 md:h-10 py-4 md:py-0 bg-red-50 md:bg-transparent text-red-500 hover:text-white hover:bg-red-600 rounded-[1.25rem] md:rounded-xl transition-all flex items-center justify-center gap-3 md:gap-0 shadow-sm md:shadow-none font-black md:font-normal"
+                                                title="إزالة هذا العمل نهائياً"
                                             >
-                                                <Trash2 size={16} />
+                                                <Trash2 size={20} className="md:w-5" />
+                                                <span className="md:hidden">إلغاء هذا النشر</span>
                                             </button>
                                         </div>
                                     </div>
