@@ -629,29 +629,33 @@ const App = () => {
                       <ChevronLeft size={16} className="text-brand-navy/40" />
                    </button>
                    
-                   <div className="w-full flex-1 px-8 py-4 overflow-hidden relative flex items-center">
-                      <div className="flex animate-marquee whitespace-nowrap gap-12 group hover:[animation-play-state:paused]">
-                         {announcements.map((ann, i) => (
-                            <div key={ann.id || i} className="flex items-center gap-3">
-                               <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
-                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
-                                  <span className="text-brand-gold shrink-0">[{ann.title}]</span>
-                                  {ann.content}
-                               </span>
-                            </div>
-                         ))}
-                         {/* Duplicate for seamless effect */}
-                         {announcements.map((ann, i) => (
-                            <div key={`dup-${ann.id || i}`} className="flex items-center gap-3">
-                               <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
-                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
-                                  <span className="text-brand-gold shrink-0">[{ann.title}]</span>
-                                  {ann.content}
-                               </span>
-                            </div>
-                         ))}
-                      </div>
-                   </div>
+                    <div className="w-full flex-1 px-8 py-4 overflow-hidden relative flex items-center">
+                      {announcements.length > 0 ? (
+                        <div className="flex animate-marquee whitespace-nowrap gap-12 group hover:[animation-play-state:paused]">
+                           {announcements.map((ann, i) => (
+                              <div key={ann.id || i} className="flex items-center gap-3">
+                                 <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
+                                 <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
+                                    <span className="text-brand-gold shrink-0">[{ann.title}]</span>
+                                    {ann.content}
+                                 </span>
+                              </div>
+                           ))}
+                           {/* Duplicate for seamless effect */}
+                           {announcements.map((ann, i) => (
+                              <div key={`dup-${ann.id || i}`} className="flex items-center gap-3">
+                                 <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
+                                 <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
+                                    <span className="text-brand-gold shrink-0">[{ann.title}]</span>
+                                    {ann.content}
+                                 </span>
+                              </div>
+                           ))}
+                        </div>
+                      ) : (
+                        <div className="text-white/30 font-black italic text-sm">لا توجد إعلانات نشطة حالياً...</div>
+                      )}
+                    </div>
                 </div>
              </div>
           </motion.div>
