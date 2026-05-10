@@ -44,7 +44,7 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
 };
 import { uploadToCloudinary } from "../lib/cloudinary";
 import { Project, ProjectType, SiteSettings, EducationLevel } from "../types";
-import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud, Smartphone } from "lucide-react";
+import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud, Smartphone, Edit2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 const DEFAULT_ABOUT_IMAGE = "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800";
@@ -53,6 +53,8 @@ export const AdminDashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"works" | "settings" | "help">("works");
   
   const [isUploading, setIsUploading] = useState(false);
@@ -280,6 +282,42 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleEdit = (project: Project) => {
+    setNewProject({
+      title: project.title,
+      description: project.description,
+      type: project.type,
+      level: project.level,
+      mediaUrl: project.mediaUrl,
+      techStack: project.techStack || ""
+    });
+    setEditingId(project.id || null);
+    setIsEditing(true);
+    // Smooth scroll to top to see the form
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser || !editingId) return;
+
+    const loadingId = toast.loading("جاري تحديث العمل...");
+    const path = `projects/${editingId}`;
+    try {
+      await setDoc(doc(db, "projects", editingId), {
+        ...newProject,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      
+      setNewProject({ title: "", description: "", type: "project", level: "secondary", mediaUrl: "", techStack: "" });
+      setIsEditing(false);
+      setEditingId(null);
+      toast.success("تم التحديث بنجاح!", { id: loadingId });
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
       e.preventDefault();
       const loadingId = toast.loading("جاري الحفظ...");
@@ -378,19 +416,19 @@ export const AdminDashboard = () => {
                     </div>
                 </motion.div>
 
-                {isAdding && (
-                <form onSubmit={handleAdd} className="card-luxury p-6 md:p-10 mb-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                {(isAdding || isEditing) && (
+                <form onSubmit={isEditing ? handleUpdate : handleAdd} className="card-luxury p-6 md:p-10 mb-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 ring-2 ring-brand-gold ring-offset-4 ring-offset-brand-paper">
                     <div className="flex items-center justify-between border-b border-black/5 pb-6">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-brand-gold text-white rounded-xl flex items-center justify-center shadow-lg">
-                                <Plus size={20} />
+                                {isEditing ? <Edit2 size={20} /> : <Plus size={20} />}
                             </div>
                             <div>
-                                <h2 className="text-lg font-display font-black italic">نشر عمل جديد</h2>
-                                <p className="text-[10px] text-brand-navy/40">سيتم الظهور في المعرض المباشر</p>
+                                <h2 className="text-lg font-display font-black italic">{isEditing ? 'تعديل العمل الحالي' : 'نشر عمل جديد'}</h2>
+                                <p className="text-[10px] text-brand-navy/40">{isEditing ? 'تعديل البيانات المنشورة بالفعل' : 'سيتم الظهور في المعرض المباشر'}</p>
                             </div>
                         </div>
-                        <button type="button" onClick={() => setIsAdding(false)} className="text-xs text-brand-navy/40 hover:text-brand-navy font-bold underline">إلغاء</button>
+                        <button type="button" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingId(null); }} className="text-xs text-brand-navy/40 hover:text-brand-navy font-bold underline">إلغاء</button>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -516,7 +554,7 @@ export const AdminDashboard = () => {
                     </div>
 
                     <button type="submit" className="w-full py-4 bg-brand-navy text-white font-black text-lg rounded-2xl hover:bg-brand-gold shadow-xl transition-all">
-                        حفظ ونشر العمل
+                        {isEditing ? 'تحديث البيانات ونشرها' : 'حفظ ونشر العمل'}
                     </button>
                 </form>
                 )}
@@ -555,7 +593,15 @@ export const AdminDashboard = () => {
                                         <div className="hidden md:block text-[10px] font-black text-brand-gold uppercase px-2 tracking-widest">
                                             {p.type}
                                         </div>
-                                        <div className="flex md:block justify-end pt-4 md:pt-0 border-t md:border-none border-black/5">
+                                        <div className="flex md:block justify-end pt-4 md:pt-0 border-t md:border-none border-black/5 gap-2">
+                                            <button 
+                                                onClick={() => handleEdit(p)} 
+                                                className="w-full md:w-10 md:h-10 py-4 md:py-0 bg-brand-gold/10 md:bg-transparent text-brand-gold hover:text-white hover:bg-brand-gold rounded-[1.25rem] md:rounded-xl transition-all flex items-center justify-center gap-3 md:gap-0 shadow-sm md:shadow-none font-black md:font-normal mb-2 md:mb-0"
+                                                title="تعديل هذا العمل"
+                                            >
+                                                <Edit2 size={20} className="md:w-5" />
+                                                <span className="md:hidden">تعديل البيانات</span>
+                                            </button>
                                             <button 
                                                 onClick={() => p.id && handleDelete(p.id)} 
                                                 className="w-full md:w-10 md:h-10 py-4 md:py-0 bg-red-50 md:bg-transparent text-red-500 hover:text-white hover:bg-red-600 rounded-[1.25rem] md:rounded-xl transition-all flex items-center justify-center gap-3 md:gap-0 shadow-sm md:shadow-none font-black md:font-normal"
