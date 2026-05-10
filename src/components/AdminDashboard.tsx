@@ -44,7 +44,7 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
 };
 import { uploadToCloudinary } from "../lib/cloudinary";
 import { Project, ProjectType, SiteSettings, EducationLevel } from "../types";
-import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud } from "lucide-react";
+import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud, Smartphone } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 const DEFAULT_ABOUT_IMAGE = "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800";
@@ -757,13 +757,17 @@ export const AdminDashboard = () => {
                                         ))}
                                     </div>
                                 </div>
-                                <motion.div 
-                                    whileHover={{ scale: 1.02 }}
-                                    className="p-5 bg-brand-gold text-brand-navy rounded-2xl shadow-xl shadow-brand-gold/10 flex items-center justify-between gap-4 cursor-help"
-                                >
-                                    <HelpCircle size={20} />
-                                    <p className="text-[10px] font-black italic text-center leading-tight">للدعم الفني المباشر تواصل مع إدارة البرمجة عبر الواتساب الخاص بالدعم.</p>
-                                </motion.div>
+                                <div className="p-8 bg-brand-gold/10 border border-brand-gold/20 rounded-[2.5rem]">
+                                    <h4 className="text-brand-navy font-black text-xs mb-2 flex items-center justify-end gap-2 text-right">نصيحة تقنية للموبايل <Smartphone size={14} /></h4>
+                                    <p className="text-[10px] text-brand-navy/60 font-black italic text-right leading-relaxed mb-4">إذا واجهت "فشل في الرفع" من الهاتف، تأكد من استقرار الإنترنت وعدم غلق الشاشة أثناء التحميل. النظام الآن يستخدم Long Polling لضمان أقصى درجات الثبات.</p>
+                                    <motion.div 
+                                        whileHover={{ scale: 1.02 }}
+                                        className="p-4 bg-brand-gold text-brand-navy rounded-2xl shadow-lg flex items-center justify-between gap-4 cursor-help"
+                                    >
+                                        <HelpCircle size={16} />
+                                        <p className="text-[9px] font-black italic text-center leading-tight">للدعم الفني المباشر تواصل مع إدارة البرمجة عبر الواتساب.</p>
+                                    </motion.div>
+                                </div>
                              </div>
                         </div>
                     </div>
