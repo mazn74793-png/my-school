@@ -23,12 +23,30 @@ export const uploadToCloudinary = async (file: File, onProgress?: (progress: num
             onProgress(percentCompleted);
           }
         },
+        // Increase timeout for large files on slow connections
+        timeout: 600000, // 10 minutes
       }
     );
 
     return response.data.secure_url;
-  } catch (error) {
-    console.error('Cloudinary Upload Error:', error);
-    throw new Error('Failed to upload file to Cloudinary');
+  } catch (error: any) {
+    console.error('Cloudinary Upload Error Details:', error);
+    
+    let errorMessage = 'Failed to upload file to Cloudinary';
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      errorMessage = `Cloudinary Error: ${error.response.data.error?.message || error.response.statusText}`;
+      console.error('Data:', error.response.data);
+    } else if (error.request) {
+      // The request was made but no response was received
+      errorMessage = 'Network Error: No response from Cloudinary. Check your internet connection.';
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      errorMessage = error.message;
+    }
+    
+    throw new Error(errorMessage);
   }
 };

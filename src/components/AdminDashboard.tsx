@@ -151,7 +151,15 @@ export const AdminDashboard = () => {
         return url;
     } catch (error: any) {
         console.error("Upload Failure Details:", error);
-        toast.error(`فشل الرفع: ${error.message || "خطأ مجهول أثناء الرفع"}`);
+        
+        let errorMsg = error.message || "خطأ مجهول أثناء الرفع";
+        
+        // Add helpful hints for mobile users
+        if (errorMsg.toLowerCase().includes("network") || errorMsg.toLowerCase().includes("timeout")) {
+            errorMsg += " - جرب استخدام Wi-Fi بدلاً من بيانات الهاتف أو تأكد من عدم غلق الشاشة.";
+        }
+        
+        toast.error(`فشل الرفع: ${errorMsg}`, { duration: 6000 });
         setIsUploading(false);
         setUploadProgress(0);
         throw error;
