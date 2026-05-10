@@ -841,9 +841,16 @@ export const AdminDashboard = () => {
                         
                         <div className="space-y-2">
                             <label htmlFor="logo-url-input" className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط الشعار الرسمي</label>
-                            <div className="flex gap-3">
-                                <input id="logo-url-input" className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.logoUrl || ""} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
-                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input id="logo-upload-input" type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={20} /></label>
+                            <div className="flex flex-col sm:flex-row gap-4 items-center">
+                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border border-black/5 bg-white flex items-center justify-center p-2 shadow-inner shrink-0 overflow-hidden">
+                                    {settings.logoUrl ? <img src={settings.logoUrl} className="w-full h-full object-contain" /> : <ImageIcon className="text-black/10" />}
+                                </div>
+                                <div className="flex-1 w-full space-y-2">
+                                    <div className="flex gap-3">
+                                        <input id="logo-url-input" className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.logoUrl || ""} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
+                                        <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input id="logo-upload-input" type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={20} /></label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -879,9 +886,21 @@ export const AdminDashboard = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة الرؤية</label>
-                            <div className="flex gap-3">
-                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.aboutImageUrl || ""} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
-                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, aboutImageUrl: url })))} /><Upload size={20} /></label>
+                            <div className="space-y-3">
+                                <div className="aspect-video w-full rounded-2xl border border-black/5 bg-white overflow-hidden flex items-center justify-center shadow-inner group relative">
+                                    {settings.aboutImageUrl ? (
+                                        <img src={settings.aboutImageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" />
+                                    ) : (
+                                        <div className="text-center">
+                                            <ImageIcon size={32} className="mx-auto mb-2 text-black/10" />
+                                            <p className="text-[10px] font-bold text-black/20 italic">لا توجد صورة حالياً</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-3">
+                                    <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.aboutImageUrl || ""} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
+                                    <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, aboutImageUrl: url })))} /><Upload size={20} /></label>
+                                </div>
                             </div>
                         </div>
                         <div className="md:col-span-2 space-y-2">
@@ -897,16 +916,43 @@ export const AdminDashboard = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">فيديو الكلمة الافتتاحية</label>
-                            <div className="flex gap-3">
-                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-[10px] shadow-inner" value={settings.directorVideoUrl || ""} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} />
-                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="video/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorVideoUrl: url })))} /><Upload size={20} /></label>
+                            <div className="space-y-3">
+                                <div className="aspect-video w-full rounded-2xl border border-black/5 bg-white overflow-hidden flex items-center justify-center shadow-inner bg-brand-navy/5">
+                                    {settings.directorVideoUrl ? (
+                                        (settings.directorVideoUrl.includes('drive.google.com') || settings.directorVideoUrl.includes('youtube.com') || settings.directorVideoUrl.includes('youtu.be')) ? (
+                                            <iframe src={formatPreviewUrl(settings.directorVideoUrl)} className="w-full h-full border-none" allowFullScreen />
+                                        ) : (
+                                            <video src={settings.directorVideoUrl} className="w-full h-full object-cover" controls muted />
+                                        )
+                                    ) : (
+                                        <div className="text-center">
+                                            <Video size={32} className="mx-auto mb-2 text-black/10" />
+                                            <p className="text-[10px] font-bold text-black/20 italic">لا يوجد فيديو حالياً</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-3">
+                                    <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-[10px] shadow-inner" value={settings.directorVideoUrl || ""} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} />
+                                    <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="video/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorVideoUrl: url })))} /><Upload size={20} /></label>
+                                </div>
                             </div>
                         </div>
                     <div className="space-y-2">
                         <label htmlFor="director-photo-input" className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة القائد (Main View)</label>
-                        <div className="flex gap-3">
-                            <input id="director-photo-input" className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.directorPhotoUrl || ""} onChange={e => setSettings({...settings, directorPhotoUrl: e.target.value})} />
-                            <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input id="director-photo-upload" type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorPhotoUrl: url })))} /><Upload size={20} /></label>
+                        <div className="space-y-3 text-center">
+                            <div className="w-24 h-24 md:w-32 md:h-32 mx-auto rounded-full border-4 border-white bg-white overflow-hidden shadow-xl flex items-center justify-center">
+                                {settings.directorPhotoUrl ? (
+                                    <img src={settings.directorPhotoUrl} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-black/5">
+                                        <ImageIcon size={32} className="text-black/10" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex gap-3">
+                                <input id="director-photo-input" className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.directorPhotoUrl || ""} onChange={e => setSettings({...settings, directorPhotoUrl: e.target.value})} />
+                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input id="director-photo-upload" type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorPhotoUrl: url })))} /><Upload size={20} /></label>
+                            </div>
                         </div>
                     </div>
                      </div>
