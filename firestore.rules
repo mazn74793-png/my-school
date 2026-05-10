@@ -42,7 +42,17 @@ service cloud.firestore {
     }
 
     function isValidSetting(data) {
-      return data.schoolName is string && data.schoolName.size() <= 100;
+      return data.schoolName is string && data.schoolName.size() <= 100 &&
+             (!data.keys().hasAny(['logoUrl']) || (data.logoUrl is string && data.logoUrl.size() <= 2000)) &&
+             (!data.keys().hasAny(['heroTitle']) || (data.heroTitle is string && data.heroTitle.size() <= 200)) &&
+             (!data.keys().hasAny(['directorVideoUrl']) || (data.directorVideoUrl is string && data.directorVideoUrl.size() <= 2000));
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll(['title', 'content', 'type', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 10000 &&
+             data.type in ['info', 'urgent', 'event'];
     }
 
     // Admins collection
@@ -64,6 +74,12 @@ service cloud.firestore {
     match /settings/{settingId} {
         allow read: if true;
         allow write: if isAdmin() && isValidSetting(incoming());
+    }
+
+    // Announcements collection
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidAnnouncement(incoming());
     }
   }
 }

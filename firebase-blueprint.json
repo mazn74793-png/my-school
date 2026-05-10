@@ -31,6 +31,18 @@
             "directorName": { "type": "string" },
             "aboutImageUrl": { "type": "string" }
         }
+    },
+    "Announcement": {
+      "title": "School Announcement",
+      "description": "Represents an announcement or decree published by the school admin.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "urgent", "event"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "type", "createdAt"]
     }
   },
   "firestore": {
@@ -41,6 +53,10 @@
     "/settings/{settingId}": {
         "schema": "Setting",
         "description": "Global settings for the portfolio."
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Collection of school announcements."
     }
   }
 }

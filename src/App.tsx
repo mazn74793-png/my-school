@@ -1,13 +1,53 @@
 import { motion, AnimatePresence } from "motion/react";
-import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy, Search, Filter, Trash2, Book, Image as ImageIcon, Video, Play, Loader2, ArrowRight } from "lucide-react";
+import { GraduationCap, Github, Linkedin, Mail, Settings, LogIn, PlayCircle, ExternalLink, Menu, X, ArrowUpRight, Trophy, Search, Filter, Trash2, Book, Image as ImageIcon, Video, Play, Loader2, ArrowRight, Bell, ChevronLeft, ChevronRight, Info, AlertTriangle, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SKILLS, ACHIEVEMENTS } from "./data";
 import { db, auth, signIn } from "./lib/firebase";
 import { collection, query, orderBy, onSnapshot, doc } from "firebase/firestore";
-import { Project, SiteSettings, EducationLevel } from "./types";
+import { Project, SiteSettings, EducationLevel, Announcement } from "./types";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { LoginModal } from "./components/LoginModal";
 import { onAuthStateChanged } from "firebase/auth";
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+  }
+}
+
+const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+};
+
 
 const DEFAULT_LOGO = "https://cdn.builder.io/api/v1/image/assets%2F4gcjufmuw5uzyaszz2aqra%2F765029423795%2F7195b09088ab47ee9ea10034a7499645";
 
@@ -80,11 +120,11 @@ const ProjectCard = ({ project, index, onClick }: { project: Project, index: num
         viewport={{ once: true }}
         transition={{ delay: (index % 6) * 0.05, duration: 0.5 }}
         onClick={onClick}
-        className="break-inside-avoid mb-8 group cursor-pointer bg-white/50 backdrop-blur-sm rounded-[2.5rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-[0_32px_64px_-16px_rgba(197,160,89,0.15)] transition-all duration-700"
+        className="break-inside-avoid mb-6 md:mb-8 group cursor-pointer bg-white/50 backdrop-blur-sm rounded-3xl md:rounded-[2.5rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-[0_32px_64px_-16px_rgba(197,160,89,0.15)] transition-all duration-700"
     >
         <div className="relative overflow-hidden bg-brand-navy/5">
             {project.type === 'video' ? (
-                <div className="relative aspect-video">
+                <div className="relative aspect-video md:aspect-[4/5]">
                   <img 
                     src={getMediaPreview(project.mediaUrl)} 
                     className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -290,12 +330,13 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
            initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
            animate={{ opacity: 1, scale: 1, rotate: 0 }}
            transition={{ duration: 1.5, type: "spring", bounce: 0.4 }}
-           className="relative z-10 w-full aspect-square max-w-[500px]"
+           className={`relative z-10 w-full aspect-square max-w-[500px] ${settings.directorVideoUrl ? 'cursor-pointer' : ''}`}
+           onClick={settings.directorVideoUrl ? onPlayVideo : undefined}
         >
           <motion.div 
             whileHover={{ 
-              scale: 1.02,
-              rotateZ: -1,
+              scale: settings.directorVideoUrl ? 1.05 : 1.02,
+              rotateZ: settings.directorVideoUrl ? -2 : -1,
               transition: { duration: 0.4 }
             }}
             animate={{ 
@@ -303,7 +344,7 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
               rotateY: [0, 5, 0]
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="w-full h-full p-4 border-[12px] border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-full bg-white flex items-center justify-center overflow-hidden"
+            className="w-full h-full p-4 border-[12px] border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-full bg-white flex items-center justify-center overflow-hidden relative"
           >
             <img 
               src={settings.directorPhotoUrl ? formatMediaUrl(settings.directorPhotoUrl, 1000) : (settings.directorVideoUrl ? getMediaPreview(settings.directorVideoUrl) : formatMediaUrl(settings.logoUrl || DEFAULT_LOGO, 1000))} 
@@ -311,6 +352,13 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
               fetchPriority="high"
               className={`w-full h-full ${settings.directorPhotoUrl || settings.directorVideoUrl ? 'object-cover' : 'object-contain'} scale-110`}
             />
+            {settings.directorVideoUrl && (
+              <div className="absolute inset-0 bg-brand-navy/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-xl border border-white/30 rounded-full flex items-center justify-center text-white">
+                    <Play size={40} fill="currentColor" />
+                </div>
+              </div>
+            )}
           </motion.div>
           
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-gold/10 rounded-full blur-3xl animate-pulse" />
@@ -333,6 +381,7 @@ const App = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdminView, setIsAdminView] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSiteReady, setIsSiteReady] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -369,8 +418,7 @@ const App = () => {
         setTimeout(() => setIsSiteReady(true), 800);
       }
     }, (error) => {
-      console.error("Projects Fetch Error:", error);
-      // Optional: toast error
+      handleFirestoreError(error, OperationType.LIST, "projects");
     });
 
     // Fetch Settings
@@ -380,13 +428,23 @@ const App = () => {
         }
         setLoading(false);
     }, (error) => {
-      console.error("Settings Fetch Error:", error);
+      handleFirestoreError(error, OperationType.GET, "settings/global");
+    });
+
+    // Fetch Announcements
+    const aq = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
+    const unsubscribeAnnouncements = onSnapshot(aq, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+      setAnnouncements(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "announcements");
     });
 
     return () => { 
         unsubscribeAuth(); 
         unsubscribeData(); 
         unsubscribeSettings();
+        unsubscribeAnnouncements();
     };
   }, []);
 
@@ -510,6 +568,50 @@ const App = () => {
       >
         <Hero settings={settings} onPlayVideo={() => setIsDirectorVideoOpen(true)} />
       </motion.div>
+
+      {/* Announcements Bar */}
+      <AnimatePresence>
+        {announcements.length > 0 && (
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="relative z-10 -mt-16 md:-mt-24 mb-20 px-6"
+          >
+             <div className="max-w-7xl mx-auto">
+                <div className="bg-brand-navy p-1 rounded-[2.5rem] md:rounded-full border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row items-stretch">
+                   <div className="bg-brand-gold px-8 py-4 flex items-center justify-center gap-3 shrink-0 rounded-[2.2rem] md:rounded-full">
+                      <Bell size={20} className="text-brand-navy animate-bounce" />
+                      <span className="font-display font-black italic text-brand-navy whitespace-nowrap">إعلانات هامة</span>
+                   </div>
+                   
+                   <div className="flex-1 px-8 py-4 overflow-hidden relative flex items-center">
+                      <div className="flex animate-marquee whitespace-nowrap gap-12 group hover:[animation-play-state:paused]">
+                         {announcements.map((ann, i) => (
+                            <div key={ann.id || i} className="flex items-center gap-3">
+                               <div className={`w-2 h-2 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
+                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none">
+                                  <span className="text-brand-gold ml-2">[{ann.title}]</span>
+                                  {ann.content}
+                               </span>
+                            </div>
+                         ))}
+                         {/* Duplicate for seamless effect */}
+                         {announcements.map((ann, i) => (
+                            <div key={`dup-${ann.id || i}`} className="flex items-center gap-3">
+                               <div className={`w-2 h-2 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
+                               <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none">
+                                  <span className="text-brand-gold ml-2">[{ann.title}]</span>
+                                  {ann.content}
+                               </span>
+                            </div>
+                         ))}
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
 
@@ -775,7 +877,7 @@ const App = () => {
             </motion.div>
           </div>
         ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-8">
+          <div className="columns-2 lg:columns-3 gap-4 md:gap-8 min-h-[400px]">
               {filteredProjects.map((project, index) => (
                   <ProjectCard 
                     key={project.id || `project-${index}`} 

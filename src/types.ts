@@ -13,6 +13,14 @@ export interface Project {
   authorId: string;
 }
 
+export interface Announcement {
+  id?: string;
+  title: string;
+  content: string;
+  type: "info" | "urgent" | "event";
+  createdAt: any;
+}
+
 export interface SiteSettings {
     schoolName: string;
     logoUrl: string;

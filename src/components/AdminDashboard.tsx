@@ -43,19 +43,21 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 };
 import { uploadToCloudinary } from "../lib/cloudinary";
-import { Project, ProjectType, SiteSettings, EducationLevel } from "../types";
-import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud, Smartphone, Edit2 } from "lucide-react";
+import { Project, ProjectType, SiteSettings, EducationLevel, Announcement } from "../types";
+import { Plus, Trash2, Video, Image as ImageIcon, Book, LogOut, Loader2, Save, Globe, Eye, Trophy, Facebook, HelpCircle, ArrowRight, Upload, CheckCircle2, ShieldCheck, Cloud, Smartphone, Edit2, Bell } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 const DEFAULT_ABOUT_IMAGE = "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800";
 
 export const AdminDashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isAddingAnnouncement, setIsAddingAnnouncement] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"works" | "settings" | "help">("works");
+  const [activeTab, setActiveTab] = useState<"works" | "announcements" | "settings" | "help">("works");
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -187,6 +189,12 @@ export const AdminDashboard = () => {
     techStack: ""
   });
 
+  const [newAnnouncement, setNewAnnouncement] = useState({
+    title: "",
+    content: "",
+    type: "info" as "info" | "urgent" | "event"
+  });
+
   const [isAdminConfirmed, setIsAdminConfirmed] = useState<boolean | null>(null);
   const [healthStatus, setHealthStatus] = useState<string>("Checking...");
 
@@ -240,12 +248,16 @@ export const AdminDashboard = () => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(data);
     }, (error) => {
-      console.error("Firestore Projects Listener Error:", error);
-      // Handle the transport error gracefully
-      if (error.message.includes('Listen stream errored') || error.message.includes('WebChannelConnection')) {
-          setHealthStatus("تحميل...");
-          // No need to show error to user as experimentalForceLongPolling handles retries
-      }
+      handleFirestoreError(error, OperationType.LIST, "projects");
+    });
+
+    // Fetch Announcements
+    const aq = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
+    const unsubscribeAnnouncements = onSnapshot(aq, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+      setAnnouncements(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "announcements");
     });
 
     // Fetch Settings
@@ -269,8 +281,43 @@ export const AdminDashboard = () => {
     };
 
     fetchSettings();
-    return () => unsubscribeWorks();
+    return () => {
+        unsubscribeWorks();
+        unsubscribeAnnouncements();
+    };
   }, []);
+
+  const handleAddAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser) return;
+
+    const loadingId = toast.loading("جاري نشر الإعلان...");
+    const path = "announcements";
+    try {
+      await addDoc(collection(db, path), {
+        ...newAnnouncement,
+        createdAt: serverTimestamp()
+      });
+      setNewAnnouncement({ title: "", content: "", type: "info" });
+      setIsAddingAnnouncement(false);
+      toast.success("تم نشر الإعلان بنجاح!", { id: loadingId });
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.CREATE, path);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (confirm("هل أنت متأكد من حذف هذا الإعلان؟")) {
+      const loadingId = toast.loading("جاري الحذف...");
+      const path = `announcements/${id}`;
+      try {
+        await deleteDoc(doc(db, "announcements", id));
+        toast.success("تم حذف الإعلان", { id: loadingId });
+      } catch (error: any) {
+        handleFirestoreError(error, OperationType.DELETE, path);
+      }
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,6 +411,7 @@ export const AdminDashboard = () => {
                     <div className="flex bg-white p-1.5 rounded-[2rem] border border-black/10 shadow-sm w-full md:w-auto overflow-x-auto scrollbar-hide no-scrollbar">
                         {[
                             { id: "works", label: "الأعمال", icon: Book },
+                            { id: "announcements", label: "الإعلانات", icon: Bell },
                             { id: "settings", label: "الإعدادات", icon: Globe },
                             { id: "help", label: "الدليل الرسمي", icon: HelpCircle }
                         ].map((tab) => (
@@ -636,6 +684,105 @@ export const AdminDashboard = () => {
                     </div>
                 </div>
             </>
+        ) : activeTab === "announcements" ? (
+             <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="flex justify-between items-center bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-brand-navy text-white rounded-2xl flex items-center justify-center shadow-lg">
+                            <Bell size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-display font-black italic">نظام الإعلانات والقرارات</h2>
+                            <p className="text-xs text-brand-navy/40 font-bold">Announcements & School Decrees</p>
+                        </div>
+                    </div>
+                    {!isAddingAnnouncement && (
+                        <motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setIsAddingAnnouncement(true)}
+                            className="bg-brand-navy text-white px-8 py-3 rounded-2xl font-black shadow-xl hover:bg-brand-gold transition-all"
+                        >
+                            إضافة إعلان جديد
+                        </motion.button>
+                    )}
+                </div>
+
+                {isAddingAnnouncement && (
+                    <motion.form 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onSubmit={handleAddAnnouncement}
+                        className="card-luxury p-8 space-y-6"
+                    >
+                         <div className="flex justify-between items-center border-b border-black/5 pb-6">
+                            <h3 className="font-display font-black italic text-brand-navy text-xl">نشر قرار أو إعلان</h3>
+                            <button type="button" onClick={() => setIsAddingAnnouncement(false)} className="text-brand-navy/40 underline font-black text-xs">إلغاء</button>
+                         </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان الإعلان</label>
+                                 <input 
+                                    className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold"
+                                    value={newAnnouncement.title}
+                                    onChange={e => setNewAnnouncement({...newAnnouncement, title: e.target.value})}
+                                    placeholder="مثلاً: تنويه بخصوص إجازة..."
+                                    required
+                                 />
+                             </div>
+                             <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">نوع الإعلان</label>
+                                 <select 
+                                    className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold"
+                                    value={newAnnouncement.type}
+                                    onChange={e => setNewAnnouncement({...newAnnouncement, type: e.target.value as any})}
+                                 >
+                                     <option value="info">إعلام عام</option>
+                                     <option value="urgent">عاجل / هام</option>
+                                     <option value="event">فعالية قادمة</option>
+                                 </select>
+                             </div>
+                         </div>
+                         <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">نص الإعلان</label>
+                             <textarea 
+                                className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm h-32"
+                                value={newAnnouncement.content}
+                                onChange={e => setNewAnnouncement({...newAnnouncement, content: e.target.value})}
+                                placeholder="اكتب تفاصيل الإعلان هنا..."
+                                required
+                             />
+                         </div>
+                         <button type="submit" className="w-full py-4 bg-brand-navy text-white font-black rounded-2xl shadow-xl hover:bg-brand-gold transition-all">
+                             حفظ ونشر الإعلان الآن
+                         </button>
+                    </motion.form>
+                )}
+
+                <div className="grid grid-cols-1 gap-4">
+                    {announcements.length === 0 ? (
+                        <div className="p-12 text-center bg-white rounded-[2.5rem] border border-black/5 italic text-brand-navy/20">لا توجد إعلانات منشورة</div>
+                    ) : (
+                        announcements.map(ann => (
+                            <div key={ann.id} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm group hover:border-brand-gold transition-all flex justify-between items-center gap-6">
+                                <button onClick={() => ann.id && handleDeleteAnnouncement(ann.id)} className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
+                                    <Trash2 size={20} />
+                                </button>
+                                <div className="text-right flex-1 bg-brand-paper/50 p-4 rounded-[2rem]">
+                                    <div className="flex items-center justify-end gap-3 mb-2">
+                                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 text-white' : ann.type === 'event' ? 'bg-brand-gold text-white' : 'bg-brand-navy text-brand-gold'}`}>{ann.type}</span>
+                                        <h3 className="font-black italic text-brand-navy">{ann.title}</h3>
+                                    </div>
+                                    <p className="text-xs text-brand-navy/60 italic leading-relaxed">{ann.content}</p>
+                                </div>
+                                <div className="w-14 h-14 bg-brand-navy/5 rounded-[1.5rem] flex items-center justify-center text-brand-navy">
+                                    <Bell size={24} />
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+             </div>
         ) : activeTab === "settings" ? (
             <motion.form 
                 initial={{ opacity: 0, x: 20 }}
