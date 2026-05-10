@@ -214,6 +214,8 @@ export const AdminDashboard = () => {
     aboutTitle: "رؤيتنا التعليمية",
     aboutDescription: "نحن في مدرسة محمد أنور السادات نبذل قصارى جهدنا لتحويل التحديات إلى فرص والطلاب إلى قادة.",
     directorName: "أ. عوني الهواري",
+    directorVideoUrl: "",
+    directorPhotoUrl: "",
     aboutImageUrl: DEFAULT_ABOUT_IMAGE
   });
 
@@ -279,7 +281,23 @@ export const AdminDashboard = () => {
             const docRef = doc(db, "settings", "global");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                setSettings(docSnap.data() as SiteSettings);
+                const data = docSnap.data();
+                setSettings(prev => ({
+                    ...prev,
+                    ...data,
+                    // Ensure strings for all controlled inputs to avoid uncontrolled warning
+                    schoolName: data.schoolName || prev.schoolName,
+                    logoUrl: data.logoUrl || prev.logoUrl,
+                    heroTitle: data.heroTitle || prev.heroTitle,
+                    heroSubtitle: data.heroSubtitle || prev.heroSubtitle,
+                    heroDescription: data.heroDescription || prev.heroDescription,
+                    aboutTitle: data.aboutTitle || prev.aboutTitle,
+                    aboutDescription: data.aboutDescription || prev.aboutDescription,
+                    directorName: data.directorName || prev.directorName,
+                    directorVideoUrl: data.directorVideoUrl || prev.directorVideoUrl || "",
+                    directorPhotoUrl: data.directorPhotoUrl || prev.directorPhotoUrl || "",
+                    aboutImageUrl: data.aboutImageUrl || prev.aboutImageUrl,
+                } as SiteSettings));
             }
             setLoading(false);
         } catch (e) {
@@ -807,7 +825,7 @@ export const AdminDashboard = () => {
                             <p className="text-xs text-brand-navy/40 font-bold">General School Configuration</p>
                         </div>
                     </div>
-                    <button type="submit" className="px-8 py-3 bg-brand-navy text-white font-black rounded-2xl shadow-xl hover:bg-brand-gold transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <button id="save-settings-btn" type="submit" className="px-8 py-3 bg-brand-navy text-white font-black rounded-2xl shadow-xl hover:bg-brand-gold transition-all active:scale-95 flex items-center justify-center gap-2">
                         <Save size={18} /> حفظ التغييرات
                     </button>
                 </div>
@@ -817,15 +835,15 @@ export const AdminDashboard = () => {
                         <h3 className="text-xs font-black uppercase tracking-widest text-brand-gold border-r-2 border-brand-gold pr-3">Identity & Branding</h3>
                         
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المؤسسة</label>
-                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.schoolName} onChange={e => setSettings({...settings, schoolName: e.target.value})} />
+                            <label htmlFor="school-name-input" className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المؤسسة</label>
+                            <input id="school-name-input" className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.schoolName || ""} onChange={e => setSettings({...settings, schoolName: e.target.value})} />
                         </div>
                         
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط الشعار الرسمي</label>
+                            <label htmlFor="logo-url-input" className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">رابط الشعار الرسمي</label>
                             <div className="flex gap-3">
-                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.logoUrl} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
-                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={20} /></label>
+                                <input id="logo-url-input" className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.logoUrl || ""} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
+                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input id="logo-upload-input" type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, logoUrl: url })))} /><Upload size={20} /></label>
                             </div>
                         </div>
                     </div>
@@ -835,12 +853,12 @@ export const AdminDashboard = () => {
                         
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">العنوان الرئيسي</label>
-                                <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.heroTitle} onChange={e => setSettings({...settings, heroTitle: e.target.value})} />
+                                <label htmlFor="hero-title-input" className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">العنوان الرئيسي</label>
+                                <input id="hero-title-input" className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.heroTitle || ""} onChange={e => setSettings({...settings, heroTitle: e.target.value})} />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">العنوان الفرعي (تميز)</label>
-                                <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.heroSubtitle} onChange={e => setSettings({...settings, heroSubtitle: e.target.value})} />
+                                <label htmlFor="hero-subtitle-input" className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">العنوان الفرعي (تميز)</label>
+                                <input id="hero-subtitle-input" className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.heroSubtitle || ""} onChange={e => setSettings({...settings, heroSubtitle: e.target.value})} />
                             </div>
                         </div>
                     </div>
@@ -848,7 +866,7 @@ export const AdminDashboard = () => {
 
                 <div className="space-y-4 pt-4">
                     <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">وصف الهيرو الترحيبي</label>
-                    <textarea className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-32 shadow-inner" value={settings.heroDescription} onChange={e => setSettings({...settings, heroDescription: e.target.value})} />
+                    <textarea className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-32 shadow-inner" value={settings.heroDescription || ""} onChange={e => setSettings({...settings, heroDescription: e.target.value})} />
                 </div>
 
                 <div className="bg-brand-gold/5 rounded-[2.5rem] p-8 border border-brand-gold/10 space-y-8">
@@ -857,40 +875,40 @@ export const AdminDashboard = () => {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">عنوان الرؤية</label>
-                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.aboutTitle} onChange={e => setSettings({...settings, aboutTitle: e.target.value})} />
+                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.aboutTitle || ""} onChange={e => setSettings({...settings, aboutTitle: e.target.value})} />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة الرؤية</label>
                             <div className="flex gap-3">
-                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.aboutImageUrl} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
+                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.aboutImageUrl || ""} onChange={e => setSettings({...settings, aboutImageUrl: e.target.value})} />
                                 <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, aboutImageUrl: url })))} /><Upload size={20} /></label>
                             </div>
                         </div>
                         <div className="md:col-span-2 space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">نص الرؤية والرسالة</label>
-                            <textarea className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-32 shadow-inner" value={settings.aboutDescription} onChange={e => setSettings({...settings, aboutDescription: e.target.value})} />
+                            <textarea className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm leading-relaxed h-32 shadow-inner" value={settings.aboutDescription || ""} onChange={e => setSettings({...settings, aboutDescription: e.target.value})} />
                         </div>
                      </div>
 
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-brand-gold/10">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">اسم المدير الموقر</label>
-                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.directorName} onChange={e => setSettings({...settings, directorName: e.target.value})} />
+                            <input className="w-full bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none text-right font-bold shadow-inner" value={settings.directorName || ""} onChange={e => setSettings({...settings, directorName: e.target.value})} />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">فيديو الكلمة الافتتاحية</label>
                             <div className="flex gap-3">
-                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-[10px] shadow-inner" value={settings.directorVideoUrl} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} />
+                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-[10px] shadow-inner" value={settings.directorVideoUrl || ""} onChange={e => setSettings({...settings, directorVideoUrl: e.target.value})} />
                                 <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="video/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorVideoUrl: url })))} /><Upload size={20} /></label>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة القائد (Main View)</label>
-                            <div className="flex gap-3">
-                                <input className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.directorPhotoUrl} onChange={e => setSettings({...settings, directorPhotoUrl: e.target.value})} />
-                                <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorPhotoUrl: url })))} /><Upload size={20} /></label>
-                            </div>
+                    <div className="space-y-2">
+                        <label htmlFor="director-photo-input" className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة القائد (Main View)</label>
+                        <div className="flex gap-3">
+                            <input id="director-photo-input" className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-xs shadow-inner" value={settings.directorPhotoUrl || ""} onChange={e => setSettings({...settings, directorPhotoUrl: e.target.value})} />
+                            <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg shadow-brand-navy/10"><input id="director-photo-upload" type="file" accept="image/*" className="hidden" onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setSettings(s => ({ ...s, directorPhotoUrl: url })))} /><Upload size={20} /></label>
                         </div>
+                    </div>
                      </div>
                 </div>
             </motion.form>

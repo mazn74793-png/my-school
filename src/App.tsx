@@ -437,6 +437,7 @@ const App = () => {
     aboutTitle: "رؤيتنا التعليمية",
     aboutDescription: "نحن في مدرسة محمد أنور السادات نبذل قصارى جهدنا لتحويل التحديات إلى فرص والطلاب إلى قادة.",
     directorName: "أ. عوني الهواري",
+    directorVideoUrl: "",
     aboutImageUrl: "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=100&w=1200",
     directorPhotoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=800"
   });
@@ -463,7 +464,7 @@ const App = () => {
     // Fetch Settings
     const unsubscribeSettings = onSnapshot(doc(db, "settings", "global"), (docSnapshot) => {
         if (docSnapshot.exists()) {
-            setSettings(docSnapshot.data() as SiteSettings);
+            setSettings(prev => ({ ...prev, ...docSnapshot.data() } as SiteSettings));
         }
         setLoading(false);
     }, (error) => {

@@ -14,8 +14,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.get('email', '').toLower() == 'motaem23y@gmail.com' ||
-        request.auth.token.get('email', '').toLower() == 'motaem23@gmail.com' ||
+        request.auth.token.get('email', '').lower() == 'motaem23y@gmail.com' ||
+        request.auth.token.get('email', '').lower() == 'motaem23@gmail.com' ||
+        request.auth.token.get('email', '').lower() == 'mazn74793@gmail.com' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -42,10 +43,17 @@ service cloud.firestore {
     }
 
     function isValidSetting(data) {
-      return data.schoolName is string && data.schoolName.size() <= 100 &&
-             (!data.keys().hasAny(['logoUrl']) || (data.logoUrl is string && data.logoUrl.size() <= 2000)) &&
-             (!data.keys().hasAny(['heroTitle']) || (data.heroTitle is string && data.heroTitle.size() <= 200)) &&
-             (!data.keys().hasAny(['directorVideoUrl']) || (data.directorVideoUrl is string && data.directorVideoUrl.size() <= 2000));
+      return (data.schoolName is string && data.schoolName.size() <= 500) &&
+             (!data.keys().hasAny(['logoUrl']) || (data.logoUrl is string && data.logoUrl.size() <= 5000)) &&
+             (!data.keys().hasAny(['heroTitle']) || (data.heroTitle is string && data.heroTitle.size() <= 1000)) &&
+             (!data.keys().hasAny(['heroSubtitle']) || (data.heroSubtitle is string && data.heroSubtitle.size() <= 1000)) &&
+             (!data.keys().hasAny(['heroDescription']) || (data.heroDescription is string && data.heroDescription.size() <= 10000)) &&
+             (!data.keys().hasAny(['aboutTitle']) || (data.aboutTitle is string && data.aboutTitle.size() <= 1000)) &&
+             (!data.keys().hasAny(['aboutDescription']) || (data.aboutDescription is string && data.aboutDescription.size() <= 50000)) &&
+             (!data.keys().hasAny(['aboutImageUrl']) || (data.aboutImageUrl is string && data.aboutImageUrl.size() <= 5000)) &&
+             (!data.keys().hasAny(['directorName']) || (data.directorName is string && data.directorName.size() <= 500)) &&
+             (!data.keys().hasAny(['directorVideoUrl']) || (data.directorVideoUrl is string && data.directorVideoUrl.size() <= 5000)) &&
+             (!data.keys().hasAny(['directorPhotoUrl']) || (data.directorPhotoUrl is string && data.directorPhotoUrl.size() <= 5000));
     }
 
     function isValidAnnouncement(data) {
@@ -58,7 +66,11 @@ service cloud.firestore {
     // Admins collection
     match /admins/{userId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.token.get('email', '').toLower() == 'motaem23y@gmail.com';
+      allow write: if isSignedIn() && (
+        request.auth.token.get('email', '').lower() == 'motaem23y@gmail.com' ||
+        request.auth.token.get('email', '').lower() == 'motaem23@gmail.com' ||
+        request.auth.token.get('email', '').lower() == 'mazn74793@gmail.com'
+      );
     }
 
     // Projects collection
