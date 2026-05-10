@@ -11,6 +11,7 @@ export const uploadToCloudinary = async (file: File, onProgress?: (progress: num
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
+  formData.append('resource_type', 'auto');
 
   try {
     const response = await axios.post(

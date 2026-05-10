@@ -114,6 +114,14 @@ export const AdminDashboard = () => {
         throw new Error("File too large");
     }
 
+    // Try to keep the screen awake for large uploads
+    let wakeLock: any = null;
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+    } catch (e) {}
+
     if (file.size > 50 * 1024 * 1024) {
         toast.custom((t) => (
             <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 overflow-hidden`}>
@@ -144,24 +152,26 @@ export const AdminDashboard = () => {
     
     try {
         const url = await uploadToCloudinary(file, (progress) => {
-            setUploadProgress(progress);
+            setUploadProgress(Math.round(progress));
         });
         callback(url);
-        toast.success("تم رفع الملف بنجاح!");
+        toast.success("تم الرفع بنجاح سحابياً!");
         setIsUploading(false);
         setUploadProgress(0);
+        if (wakeLock) await wakeLock.release();
         return url;
     } catch (error: any) {
+        if (wakeLock) await wakeLock.release();
         console.error("Upload Failure Details:", error);
         
         let errorMsg = error.message || "خطأ مجهول أثناء الرفع";
         
         // Add helpful hints for mobile users
-        if (errorMsg.toLowerCase().includes("network") || errorMsg.toLowerCase().includes("timeout")) {
-            errorMsg += " - جرب استخدام Wi-Fi بدلاً من بيانات الهاتف أو تأكد من عدم غلق الشاشة.";
+        if (errorMsg.toLowerCase().includes("network") || errorMsg.toLowerCase().includes("timeout") || errorMsg.toLowerCase().includes("request failed")) {
+            errorMsg = "حدث انقطاع في الشبكة (Network Interruption). يرجى التأكد من استقرار الإنترنت وعدم غلق المتصفح أو تطبيق الرفع.";
         }
         
-        toast.error(`فشل الرفع: ${errorMsg}`, { duration: 6000 });
+        toast.error(`فشل الرفع: ${errorMsg}`, { duration: 10000 });
         setIsUploading(false);
         setUploadProgress(0);
         throw error;
@@ -417,7 +427,12 @@ export const AdminDashboard = () => {
                 </motion.div>
 
                 {(isAdding || isEditing) && (
-                <form onSubmit={isEditing ? handleUpdate : handleAdd} className="card-luxury p-6 md:p-10 mb-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 ring-2 ring-brand-gold ring-offset-4 ring-offset-brand-paper">
+                <motion.form 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onSubmit={isEditing ? handleUpdate : handleAdd} 
+                    className={`card-luxury p-6 md:p-10 mb-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 ring-2 ${isEditing ? 'ring-brand-gold' : 'ring-brand-navy/10'} ring-offset-4 ring-offset-brand-paper`}
+                >
                     <div className="flex items-center justify-between border-b border-black/5 pb-6">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-brand-gold text-white rounded-xl flex items-center justify-center shadow-lg">
@@ -556,7 +571,7 @@ export const AdminDashboard = () => {
                     <button type="submit" className="w-full py-4 bg-brand-navy text-white font-black text-lg rounded-2xl hover:bg-brand-gold shadow-xl transition-all">
                         {isEditing ? 'تحديث البيانات ونشرها' : 'حفظ ونشر العمل'}
                     </button>
-                </form>
+                </motion.form>
                 )}
 
                 <div className="space-y-4">
