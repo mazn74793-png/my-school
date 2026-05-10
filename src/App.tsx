@@ -202,8 +202,13 @@ const Navbar = ({ onAdminClick, user, settings }: { onAdminClick: () => void, us
         className="max-w-7xl mx-auto px-6 flex items-center justify-between"
       >
         <div className="flex items-center gap-3 md:gap-4 shrink-0">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-white flex items-center justify-center p-0.5 border border-black/5 shadow-sm shrink-0">
-            <img src={formatMediaUrl(settings.logoUrl || DEFAULT_LOGO, 120)} alt="Logo" className="w-full h-full object-contain" fetchPriority="high" />
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-white flex items-center justify-center p-1 border border-black/5 shadow-sm shrink-0 transition-transform hover:scale-105 duration-500">
+            <img 
+              src={formatMediaUrl(settings.logoUrl || DEFAULT_LOGO, 200)} 
+              alt="Logo" 
+              className="w-full h-full object-contain" 
+              fetchPriority="high" 
+            />
           </div>
           <div className="flex flex-col min-w-0 text-right">
             <motion.span 
@@ -286,24 +291,8 @@ const Navbar = ({ onAdminClick, user, settings }: { onAdminClick: () => void, us
 
 const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?: () => void }) => (
   <section className="relative min-h-screen flex items-center pt-32 px-6 overflow-hidden bg-brand-paper">
-    {/* Floating Decorative Elements */}
-    <motion.div 
-      animate={{ 
-        y: [0, -20, 0],
-        rotate: [0, 90, 0]
-      }}
-      transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-      className="absolute top-1/4 -left-20 w-80 h-80 border border-brand-gold/10 rounded-full hidden lg:block"
-    />
-    <motion.div 
-      animate={{ 
-        y: [0, 30, 0],
-        scale: [1, 1.1, 1]
-      }}
-      transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-      className="absolute bottom-1/4 -right-20 w-96 h-96 border border-brand-navy/5 rounded-full hidden lg:block"
-    />
-
+    {/* Background Decorative Elements Removed for Clarity */}
+    
     <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
       <motion.div 
         initial={{ opacity: 0, x: -50 }}
@@ -353,12 +342,20 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
           {settings.directorVideoUrl && (
             <button 
               onClick={onPlayVideo}
-              className="flex items-center gap-3 px-6 py-5 bg-white border border-black/5 text-brand-navy rounded-full font-bold hover:border-brand-gold transition-all shadow-sm group"
+              className="flex items-center gap-4 px-8 py-6 bg-white border-2 border-brand-gold/20 text-brand-navy rounded-[2rem] font-bold hover:border-brand-gold transition-all shadow-xl hover:shadow-brand-gold/10 group"
             >
-              <div className="w-8 h-8 rounded-full bg-brand-gold/10 flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-white transition-colors">
-                <PlayCircle size={20} />
+              <div className="relative shrink-0">
+                <div className="relative w-12 h-12 rounded-full bg-brand-gold flex items-center justify-center text-brand-navy shadow-lg transition-transform group-hover:scale-110">
+                  <Play size={20} fill="currentColor" className="ml-0.5" />
+                </div>
               </div>
-              كلمة المدير
+              <div className="text-right border-r-2 border-black/5 pr-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-brand-gold font-black uppercase tracking-[0.2em] leading-none mb-1">كلمة القائد</span>
+                  <span className="text-xl font-display italic font-black leading-tight text-brand-navy">{settings.directorName}</span>
+                  <span className="text-[8px] text-brand-navy/40 font-mono uppercase tracking-widest mt-1">Director & Leader</span>
+                </div>
+              </div>
             </button>
           )}
         </div>
@@ -369,13 +366,12 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
            initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
            animate={{ opacity: 1, scale: 1, rotate: 0 }}
            transition={{ duration: 1.5, type: "spring", bounce: 0.4 }}
-           className={`relative z-10 w-full aspect-square max-w-[500px] ${settings.directorVideoUrl ? 'cursor-pointer' : ''}`}
-           onClick={settings.directorVideoUrl ? onPlayVideo : undefined}
+           className="relative z-10 w-full aspect-square max-w-[500px]"
         >
           <motion.div 
             whileHover={{ 
-              scale: settings.directorVideoUrl ? 1.05 : 1.02,
-              rotateZ: settings.directorVideoUrl ? -2 : -1,
+              scale: 1.02,
+              rotateZ: -1,
               transition: { duration: 0.4 }
             }}
             animate={{ 
@@ -389,19 +385,13 @@ const Hero = ({ settings, onPlayVideo }: { settings: SiteSettings, onPlayVideo?:
               src={settings.directorPhotoUrl ? formatMediaUrl(settings.directorPhotoUrl, 1000) : (settings.directorVideoUrl ? getMediaPreview(settings.directorVideoUrl) : formatMediaUrl(settings.logoUrl || DEFAULT_LOGO, 1000))} 
               alt="Director" 
               fetchPriority="high"
-              className={`w-full h-full ${settings.directorPhotoUrl || settings.directorVideoUrl ? 'object-cover' : 'object-contain'} scale-110`}
+              className={`w-full h-full ${settings.directorPhotoUrl || settings.directorVideoUrl ? 'object-cover' : 'object-contain'}`}
             />
-            {settings.directorVideoUrl && (
-              <div className="absolute inset-0 bg-brand-navy/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <div className="w-20 h-20 bg-white/20 backdrop-blur-xl border border-white/30 rounded-full flex items-center justify-center text-white">
-                    <Play size={40} fill="currentColor" />
-                </div>
-              </div>
-            )}
           </motion.div>
           
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-gold/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-navy/5 rounded-full blur-3xl animate-pulse" />
+          {/* Removed background blobs for clarity */}
+          
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-brand-gold/5 rounded-full blur-[120px] pointer-events-none" />
         </motion.div>
         <motion.div 
             initial={{ opacity: 0 }}
@@ -612,48 +602,44 @@ const App = () => {
 
       {/* Announcements Bar */}
       <AnimatePresence>
-        {announcements.length > 0 && (
+        {isSiteReady && (
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="relative z-10 -mt-20 md:-mt-24 mb-20 px-4 md:px-6"
+            className="relative z-20 mt-4 md:mt-8 mb-20 px-4 md:px-6"
           >
              <div className="max-w-7xl mx-auto">
                 <div className="bg-brand-navy p-1.5 rounded-[2.5rem] md:rounded-full border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row items-center">
                    <button 
                       onClick={() => setIsAnnouncementsModalOpen(true)}
-                      className="bg-brand-gold px-8 py-4 flex items-center justify-center gap-3 shrink-0 rounded-[2.2rem] md:rounded-full hover:scale-105 transition-transform active:scale-95 group"
+                      className="bg-brand-gold px-10 py-5 flex items-center justify-center gap-3 shrink-0 rounded-[2.2rem] md:rounded-full hover:scale-105 transition-all active:scale-95 group shadow-lg shadow-brand-gold/10"
                    >
-                      <Bell size={20} className="text-brand-navy animate-bounce group-hover:animate-none" />
-                      <span className="font-display font-black italic text-brand-navy whitespace-nowrap">إعلانات هامة</span>
-                      <ChevronLeft size={16} className="text-brand-navy/40" />
+                      <Bell size={24} className="text-brand-navy animate-bounce group-hover:animate-none" />
+                      <span className="font-display font-black italic text-brand-navy text-xl whitespace-nowrap">إعلانات هامة</span>
+                      <ChevronLeft size={20} className="text-brand-navy/60 group-hover:translate-x-[-4px] transition-transform" />
                    </button>
                    
-                    <div className="w-full flex-1 px-8 py-4 overflow-hidden relative flex items-center">
+                    <div className="w-full flex-1 px-10 py-5 overflow-hidden relative flex items-center">
                       {announcements.length > 0 ? (
-                        <div className="flex animate-marquee whitespace-nowrap gap-12 group hover:[animation-play-state:paused]">
-                           {announcements.map((ann, i) => (
-                              <div key={ann.id || i} className="flex items-center gap-3">
-                                 <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
-                                 <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
-                                    <span className="text-brand-gold shrink-0">[{ann.title}]</span>
-                                    {ann.content}
-                                 </span>
-                              </div>
-                           ))}
-                           {/* Duplicate for seamless effect */}
-                           {announcements.map((ann, i) => (
-                              <div key={`dup-${ann.id || i}`} className="flex items-center gap-3">
-                                 <div className={`w-2 h-2 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
-                                 <span className="text-white/80 font-black italic text-sm md:text-base border-r border-white/10 pr-6 mr-6 last:border-none flex items-center gap-2">
-                                    <span className="text-brand-gold shrink-0">[{ann.title}]</span>
-                                    {ann.content}
-                                 </span>
+                        <div className="flex animate-marquee whitespace-nowrap gap-20 group hover:[animation-play-state:paused] cursor-pointer" onClick={() => setIsAnnouncementsModalOpen(true)}>
+                           {[...announcements, ...announcements].map((ann, i) => (
+                              <div key={`${ann.id || 'ann'}-${i}`} className="flex items-center gap-5">
+                                 <div className={`w-3 h-3 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse ring-4 ring-red-500/20' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
+                                 <div className="flex items-center gap-3">
+                                    <span className="text-brand-gold font-black italic text-lg opacity-80 decoration-brand-gold/30 underline-offset-4">[{ann.title}]</span>
+                                    <span className="text-white font-bold italic text-base md:text-lg tracking-tight uppercase">
+                                       {ann.content}
+                                    </span>
+                                 </div>
+                                 <div className="h-4 w-[1px] bg-white/10 mx-5" />
                               </div>
                            ))}
                         </div>
                       ) : (
-                        <div className="text-white/30 font-black italic text-sm">لا توجد إعلانات نشطة حالياً...</div>
+                        <div className="flex items-center gap-3 text-white/40 font-black italic text-base animate-pulse">
+                           <div className="w-2 h-2 rounded-full bg-white/20" />
+                           بانتظار الإعلانات الجديدة اليوم...
+                        </div>
                       )}
                     </div>
                 </div>
@@ -1033,8 +1019,13 @@ const App = () => {
       <footer className="py-24 px-6 border-t border-black/5 bg-white">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
            <div className="flex items-center gap-4 md:gap-6 shrink-0">
-              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-white flex items-center justify-center p-1 border border-black/5 shadow-sm shrink-0">
-                <img src={formatMediaUrl(settings.logoUrl || DEFAULT_LOGO, 120)} alt="Final Logo" loading="lazy" className="w-full h-full object-contain" />
+              <div className="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden bg-white flex items-center justify-center p-2 shadow-lg shrink-0 transition-transform hover:scale-105 duration-500">
+                <img 
+                  src={formatMediaUrl(settings.logoUrl || DEFAULT_LOGO, 400)} 
+                  alt="Final Logo" 
+                  loading="lazy" 
+                  className="w-full h-full object-contain" 
+                />
               </div>
               <div className="text-right min-w-0">
                 <motion.p 
