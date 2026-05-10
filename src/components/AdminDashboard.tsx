@@ -62,6 +62,8 @@ export const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [isAddingAnnouncement, setIsAddingAnnouncement] = useState(false);
+  const [isEditingAnnouncement, setIsEditingAnnouncement] = useState(false);
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"works" | "announcements" | "settings" | "help">("works");
@@ -199,6 +201,7 @@ export const AdminDashboard = () => {
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: "",
     content: "",
+    imageUrl: "",
     type: "info" as "info" | "urgent" | "event"
   });
 
@@ -316,19 +319,43 @@ export const AdminDashboard = () => {
     e.preventDefault();
     if (!auth.currentUser) return;
 
-    const loadingId = toast.loading("جاري نشر الإعلان...");
-    const path = "announcements";
+    const loadingId = toast.loading(isEditingAnnouncement ? "جاري تحديث الإعلان..." : "جاري نشر الإعلان...");
+    const path = isEditingAnnouncement ? `announcements/${editingAnnouncementId}` : "announcements";
     try {
-      await addDoc(collection(db, path), {
-        ...newAnnouncement,
-        createdAt: serverTimestamp()
-      });
-      setNewAnnouncement({ title: "", content: "", type: "info" });
+      if (isEditingAnnouncement && editingAnnouncementId) {
+        await setDoc(doc(db, "announcements", editingAnnouncementId), {
+          ...newAnnouncement,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        toast.success("تم تحديث الإعلان بنجاح!", { id: loadingId });
+      } else {
+        await addDoc(collection(db, "announcements"), {
+          ...newAnnouncement,
+          createdAt: serverTimestamp()
+        });
+        toast.success("تم نشر الإعلان بنجاح!", { id: loadingId });
+      }
+      setNewAnnouncement({ title: "", content: "", imageUrl: "", type: "info" });
       setIsAddingAnnouncement(false);
-      toast.success("تم نشر الإعلان بنجاح!", { id: loadingId });
+      setIsEditingAnnouncement(false);
+      setEditingAnnouncementId(null);
     } catch (error: any) {
-      handleFirestoreError(error, OperationType.CREATE, path);
+      handleFirestoreError(error, isEditingAnnouncement ? OperationType.UPDATE : OperationType.CREATE, path);
     }
+  };
+
+  const handleEditAnnouncement = (ann: Announcement) => {
+    setNewAnnouncement({
+      title: ann.title,
+      content: ann.content,
+      imageUrl: ann.imageUrl || "",
+      type: ann.type
+    });
+    setEditingAnnouncementId(ann.id || null);
+    setIsEditingAnnouncement(true);
+    setIsAddingAnnouncement(true);
+    // Smooth scroll to top of form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteAnnouncement = async (id: string) => {
@@ -738,11 +765,13 @@ export const AdminDashboard = () => {
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         onSubmit={handleAddAnnouncement}
-                        className="card-luxury p-8 space-y-6"
+                        className={`card-luxury p-8 space-y-6 ring-2 ${isEditingAnnouncement ? 'ring-brand-gold' : 'ring-brand-navy/10'} ring-offset-4 ring-offset-brand-paper`}
                     >
                          <div className="flex justify-between items-center border-b border-black/5 pb-6">
-                            <h3 className="font-display font-black italic text-brand-navy text-xl">نشر قرار أو إعلان</h3>
-                            <button type="button" onClick={() => setIsAddingAnnouncement(false)} className="text-brand-navy/40 underline font-black text-xs">إلغاء</button>
+                            <h3 className="font-display font-black italic text-brand-navy text-xl">
+                                {isEditingAnnouncement ? 'تعديل القرار أو الإعلان' : 'نشر قرار أو إعلان'}
+                            </h3>
+                            <button type="button" onClick={() => { setIsAddingAnnouncement(false); setIsEditingAnnouncement(false); setEditingAnnouncementId(null); }} className="text-brand-navy/40 underline font-black text-xs">إلغاء</button>
                          </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <div className="space-y-2">
@@ -768,18 +797,51 @@ export const AdminDashboard = () => {
                                  </select>
                              </div>
                          </div>
-                         <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">نص الإعلان</label>
-                             <textarea 
-                                className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm h-32"
-                                value={newAnnouncement.content}
-                                onChange={e => setNewAnnouncement({...newAnnouncement, content: e.target.value})}
-                                placeholder="اكتب تفاصيل الإعلان هنا..."
-                                required
-                             />
+                         <div className="space-y-4">
+                             <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">صورة الإعلان (اختياري)</label>
+                                 <div className="flex gap-3">
+                                     <div className="w-16 h-16 md:w-20 md:h-20 bg-white border border-black/5 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                                         {newAnnouncement.imageUrl ? (
+                                             <img src={newAnnouncement.imageUrl} className="w-full h-full object-cover" />
+                                         ) : (
+                                             <ImageIcon className="text-black/10" size={24} />
+                                         )}
+                                     </div>
+                                     <div className="flex-1 space-y-2">
+                                         <div className="flex gap-2">
+                                             <input 
+                                                className="flex-1 bg-brand-paper border border-black/5 rounded-2xl py-4 px-6 focus:border-brand-gold outline-none font-mono text-[10px] shadow-inner"
+                                                value={newAnnouncement.imageUrl || ""}
+                                                onChange={e => setNewAnnouncement({...newAnnouncement, imageUrl: e.target.value})}
+                                                placeholder="رابط الصورة أو ارفع واحدة..."
+                                             />
+                                             <label className="cursor-pointer w-14 h-14 bg-brand-navy text-white rounded-2xl flex items-center justify-center hover:bg-brand-gold transition-all shadow-lg active:scale-95 shrink-0">
+                                                 <input 
+                                                     type="file" 
+                                                     accept="image/*" 
+                                                     className="hidden" 
+                                                     onChange={async e => e.target.files?.[0] && await handleFileUpload(e.target.files[0], (url) => setNewAnnouncement(prev => ({ ...prev, imageUrl: url })))} 
+                                                 />
+                                                 <Upload size={20} />
+                                             </label>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                             <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 pr-2">نص الإعلان</label>
+                                 <textarea 
+                                    className="w-full bg-brand-paper border border-black/5 rounded-3xl p-6 focus:border-brand-gold outline-none text-right text-sm h-34"
+                                    value={newAnnouncement.content}
+                                    onChange={e => setNewAnnouncement({...newAnnouncement, content: e.target.value})}
+                                    placeholder="اكتب تفاصيل الإعلان هنا..."
+                                    required
+                                 />
+                             </div>
                          </div>
                          <button type="submit" className="w-full py-4 bg-brand-navy text-white font-black rounded-2xl shadow-xl hover:bg-brand-gold transition-all">
-                             حفظ ونشر الإعلان الآن
+                             {isEditingAnnouncement ? 'تحديث الإعلان الآن' : 'حفظ ونشر الإعلان الآن'}
                          </button>
                     </motion.form>
                 )}
@@ -790,15 +852,27 @@ export const AdminDashboard = () => {
                     ) : (
                         announcements.map(ann => (
                             <div key={ann.id} className="bg-white p-6 rounded-[2.5rem] border border-black/5 shadow-sm group hover:border-brand-gold transition-all flex justify-between items-center gap-6">
-                                <button onClick={() => ann.id && handleDeleteAnnouncement(ann.id)} className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
-                                    <Trash2 size={20} />
-                                </button>
-                                <div className="text-right flex-1 bg-brand-paper/50 p-4 rounded-[2rem]">
-                                    <div className="flex items-center justify-end gap-3 mb-2">
-                                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 text-white' : ann.type === 'event' ? 'bg-brand-gold text-white' : 'bg-brand-navy text-brand-gold'}`}>{ann.type}</span>
-                                        <h3 className="font-black italic text-brand-navy">{ann.title}</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleEditAnnouncement(ann)} className="w-12 h-12 bg-brand-gold/10 text-brand-gold rounded-2xl flex items-center justify-center hover:bg-brand-gold hover:text-white transition-all">
+                                        <Edit2 size={20} />
+                                    </button>
+                                    <button onClick={() => ann.id && handleDeleteAnnouncement(ann.id)} className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
+                                        <Trash2 size={20} />
+                                    </button>
+                                </div>
+                                <div className="text-right flex-1 bg-brand-paper/50 p-4 rounded-[2rem] flex items-center gap-4 justify-end">
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-end gap-3 mb-2">
+                                            <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 text-white' : ann.type === 'event' ? 'bg-brand-gold text-white' : 'bg-brand-navy text-brand-gold'}`}>{ann.type}</span>
+                                            <h3 className="font-black italic text-brand-navy">{ann.title}</h3>
+                                        </div>
+                                        <p className="text-xs text-brand-navy/60 italic leading-relaxed">{ann.content}</p>
                                     </div>
-                                    <p className="text-xs text-brand-navy/60 italic leading-relaxed">{ann.content}</p>
+                                    {ann.imageUrl && (
+                                        <div className="w-16 h-16 rounded-2xl overflow-hidden border border-black/5 shrink-0">
+                                            <img src={ann.imageUrl} className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="w-14 h-14 bg-brand-navy/5 rounded-[1.5rem] flex items-center justify-center text-brand-navy">
                                     <Bell size={24} />

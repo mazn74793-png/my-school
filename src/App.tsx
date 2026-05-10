@@ -419,6 +419,7 @@ const App = () => {
   const [filterLevel, setFilterLevel] = useState<EducationLevel | "all">("all");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isAnnouncementsModalOpen, setIsAnnouncementsModalOpen] = useState(false);
+  const [fullScreenImageUrl, setFullScreenImageUrl] = useState<string | null>(null);
   const [settings, setSettings] = useState<SiteSettings>({
     schoolName: "مدرسة محمد أنور السادات",
     logoUrl: DEFAULT_LOGO,
@@ -626,6 +627,17 @@ const App = () => {
                               <div key={`${ann.id || 'ann'}-${i}`} className="flex items-center gap-5">
                                  <div className={`w-3 h-3 rounded-full shrink-0 ${ann.type === 'urgent' ? 'bg-red-500 animate-pulse ring-4 ring-red-500/20' : ann.type === 'event' ? 'bg-brand-gold' : 'bg-white/20'}`} />
                                  <div className="flex items-center gap-3">
+                                    {ann.imageUrl && (
+                                        <div 
+                                          className="w-8 h-8 rounded-lg overflow-hidden border border-white/20 shrink-0 cursor-zoom-in"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setFullScreenImageUrl(ann.imageUrl || null);
+                                          }}
+                                        >
+                                            <img src={ann.imageUrl} className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
                                     <span className="text-brand-gold font-black italic text-lg opacity-80 decoration-brand-gold/30 underline-offset-4">[{ann.title}]</span>
                                     <span className="text-white font-bold italic text-base md:text-lg tracking-tight uppercase">
                                        {ann.content}
@@ -675,12 +687,25 @@ const App = () => {
               
               <div className="flex-1 overflow-y-auto p-8 space-y-4 no-scrollbar">
                  {announcements.map((ann) => (
-                    <div key={ann.id} className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm hover:border-brand-gold transition-all text-right">
-                       <div className="flex items-center justify-end gap-3 mb-2">
-                          <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 text-white' : ann.type === 'event' ? 'bg-brand-gold text-white' : 'bg-brand-navy text-brand-gold'}`}>{ann.type}</span>
-                          <h4 className="font-black italic text-brand-navy">{ann.title}</h4>
+                    <div key={ann.id} className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm hover:border-brand-gold transition-all text-right flex flex-col md:flex-row-reverse gap-4">
+                       <div className="flex-1">
+                          <div className="flex items-center justify-end gap-3 mb-2">
+                             <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${ann.type === 'urgent' ? 'bg-red-500 text-white' : ann.type === 'event' ? 'bg-brand-gold text-white' : 'bg-brand-navy text-brand-gold'}`}>{ann.type}</span>
+                             <h4 className="font-black italic text-brand-navy">{ann.title}</h4>
+                          </div>
+                          <p className="text-sm text-brand-navy/60 italic leading-relaxed">{ann.content}</p>
                        </div>
-                       <p className="text-sm text-brand-navy/60 italic leading-relaxed">{ann.content}</p>
+                       {ann.imageUrl && (
+                          <div 
+                            className="w-full md:w-32 h-32 md:h-24 rounded-2xl overflow-hidden border border-black/5 self-center cursor-zoom-in"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setFullScreenImageUrl(ann.imageUrl || null);
+                            }}
+                          >
+                             <img src={ann.imageUrl} className="w-full h-full object-cover" />
+                          </div>
+                       )}
                     </div>
                  ))}
               </div>
@@ -690,6 +715,44 @@ const App = () => {
       </AnimatePresence>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+
+      {/* Fullscreen Image Preview Modal */}
+      <AnimatePresence>
+        {fullScreenImageUrl && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4 md:p-12 cursor-zoom-out"
+            onClick={() => setFullScreenImageUrl(null)}
+          >
+            <motion.button 
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="absolute top-6 right-6 z-[1010] w-14 h-14 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all border border-white/10"
+              onClick={() => setFullScreenImageUrl(null)}
+            >
+              <X size={28} />
+            </motion.button>
+            
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative max-w-full max-h-full overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+               <img 
+                 src={fullScreenImageUrl} 
+                 className="max-w-full max-h-screen object-contain rounded-xl shadow-2xl" 
+                 alt="Fullscreen Preview"
+               />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Director Video Modal */}
       <AnimatePresence>
